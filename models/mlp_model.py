@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 
@@ -26,6 +27,7 @@ class MLP(nn.Module):
     :return: predicted output
     :rtype: torch.Tensor
     """
+    y = torch.flatten(x, 1)
     y = self.layer_1(x)
     y = self.relu_layer_1(y)
     y = self.layer_2(y)
