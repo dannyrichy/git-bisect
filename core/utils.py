@@ -1,12 +1,6 @@
 import torch
 
 
-def frobenius_inner_product(a, b):
-    return torch.trace(
-            torch.matmul(a, torch.transpose(b))
-    )
-
-
 def loss_barrier(model_a, model_b, loss_func, x, y, lambda_list=None):
     """
     Gets the list of loss barrier for provided list of lambda

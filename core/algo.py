@@ -1,12 +1,12 @@
 import numpy
-
 from procrustes import permutation
+
 from helper import timer_func
 
 
 class Algorithm:
     """"
-    Implementation for MLP
+    Parent class for all the methods
     """
     perm = None
     def __init__(self, archi:list[int], model_width):
@@ -38,7 +38,7 @@ class ActivationMethod(Algorithm):
         self.loss = res.get('error')
         return res.get('t').T
     
-    @timer_func("Activation method")
+    @timer_func("Activation method", )
     def get_permuation(self, model_a_act, model_b_act):
         """
         Get's layer wise permutation matrix
