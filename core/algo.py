@@ -1,4 +1,3 @@
-import torch
 import numpy
 
 from procrustes import permutation
@@ -10,17 +9,17 @@ class Algorithm:
     Implementation for MLP
     """
     perm = None
-    def __init__(self, archi, model_width):
+    def __init__(self, archi:list[int], model_width):
         self.loss = None
         self.archi = archi
         self.model_width = model_width
 
 
 class ActivationMethod(Algorithm):
-    def __init__(self, archi, model_width):
+    def __init__(self, archi, model_width) -> None:
         super().__init__(archi, model_width)
 
-    def _layer_wise(self, act_a, act_b):
+    def _layer_wise(self, act_a, act_b)->numpy.ndarray:
         """
         Model B is considered to be permuted
 
@@ -31,7 +30,7 @@ class ActivationMethod(Algorithm):
         :type act_b: torch.Tensor
 
         :return: permutation matrix for the corresponding layer
-        :rtype:
+        :rtype: numpy.ndarray
         """
         # Note that the procrustes algorithm works with the form
         
@@ -51,11 +50,11 @@ class ActivationMethod(Algorithm):
         :type model_b_act: numpy.ndarray
         
         :return: List of permutation matrix
-        :rtype: list
+        :rtype: list[numpy.ndarray]
         """
         if not (isinstance(model_a_act, numpy.ndarray) and isinstance(model_b_act, numpy.ndarray)):
             raise TypeError("Activations must be numpy array")
-        if model_a_act.shape() == len.shape():
+        if model_a_act.shape == model_b_act.shape:
             raise Exception(f"Model architecture don't match: model_a has {len(model_a_act)} layers and model_b has {len(model_b_act)}")
         
         
