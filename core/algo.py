@@ -1,18 +1,33 @@
 import torch
 
-from core.utils import frobenius_inner_product
+from procrustes.permutation import permutation
 
 
 class Algorithm:
-    def __init__(self, dim):
+    """"
+    Implementation for MLP
+    """
+
+    def __init__(self, dim, model_width):
         self.loss = None
         self.dim = dim
-        self.permutation = torch.zeros((self.dim, self.dim))
+        self.model_width = model_width
 
-    # Method 1: Matching activations
-    def match_activation(self, activation_1, activation_2):
+
+class ActivationMethod(Algorithm):
+    def __init__(self, dim, model_width):
+        super().__init__(dim, model_width)
+
+    def _layer_wise(self, act_a, act_b):
         """
+        Model B is considered to be permuted
 
+        :param act_a: Activation of Model a layer in the model
+        :type act_a: torch.Tensor
+
+        :param act_b: Activation of Model b layer in the model
+        :type act_b: torch.Tensor
+
+        :return: permutation matrix for the corresponding layer
+        :rtype:
         """
-        maximiser = frobenius_inner_product(self.permutation, torch.matmul(activation_1, torch.transpose(activation_2)))
-
