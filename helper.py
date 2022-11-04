@@ -4,8 +4,12 @@ from config import TIME_FLAG
 
 
 def timer_func(name:str):
-    # This function shows the execution time of 
-    # the function object passed
+    """
+    Decorator function to note down the time taken to execute
+
+    :param name: Name of the function that is to be noted
+    :type name: str
+    """
     def inner_func(func):
         def wrap_func(*args, **kwargs):
             if TIME_FLAG:
