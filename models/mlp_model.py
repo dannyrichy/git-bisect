@@ -1,5 +1,9 @@
+from functools import partial
+
 import torch
 from torch import nn
+
+from models.utils import hook_func
 
 
 class MLP(nn.Module):
@@ -37,3 +41,17 @@ class MLP(nn.Module):
     y = self.layer_4(y)
             
     return y
+
+
+def register_hook(mlp_inst:MLP, activations_dict:dict) -> None:
+  """
+  Function to register hook
+
+  :param mlp_inst: _description_
+  :type mlp_inst: MLP
+  :param activations_dict: _description_
+  :type activations_dict: dict
+  """
+  for name, layer in mlp_inst.named_modules():
+    if name != '':
+      layer.register_forward_hook(hook=partial(hook_func, activations_dict, name))

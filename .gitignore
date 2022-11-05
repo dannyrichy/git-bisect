@@ -3,6 +3,7 @@
 .vscode
 Pipfile
 Pipfile.lock
+data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -38,7 +38,7 @@ class ActivationMethod(Permuter):
         self.loss = res.get('error')
         return res.get('t').T
     
-    @timer_func("Activation method", )
+    @timer_func("Activation method")
     def get_permuation(self, model_a_act, model_b_act):
         """
         Get's layer wise permutation matrix

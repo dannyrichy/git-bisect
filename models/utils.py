@@ -1,10 +1,10 @@
-import torch
 import time
-import torchvision
-import torchvision.transforms as transforms
-import torch.optim as optim
 from pathlib import Path
 
+import torch
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
 
 """
 Utilities to help with creating hook
@@ -23,12 +23,12 @@ def cifar10_loader():
 
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                             download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, # type: ignore
                                               shuffle=True)
 
     testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                            download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,  # type: ignore
                                              shuffle=False)
 
     return trainloader, testloader
@@ -60,3 +60,23 @@ def train(trainloader, model, epochs, model_name='mlp'):
     torch.save(model.state_dict(), path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'))
     
     return model
+
+
+def hook_func(res_dict: dict, name:str, module:torch.nn.modules.Module, inp: torch.Tensor, out:torch.Tensor) -> None:
+    """
+    Reciepe for hook function, ensure to call partial on this
+    with dictionary object to store the values
+
+    :param res_dict: _description_
+    :type res_dict: dict
+    :param name:
+    :type name: str
+    :param module: _description_
+    :type module: torch.nn.modules.Module
+    :param inp: _description_
+    :type inp: torch.Tensor
+    :param out: _description_
+    :type out: torch.Tensor
+    """
+    res_dict[name] = out
+    
