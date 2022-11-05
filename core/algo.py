@@ -49,9 +49,11 @@ class ActivationMethod(Permuter):
         :return: List of permutation matrix
         :rtype: list[numpy.ndarray]
         """ 
-        if len(self.perm) == 0:
-            for act_a, act_b in zip(model_a_act.values(), model_b_act.values()):
-                self._layer_wise(act_a=act_a.detach().numpy(), act_b= act_b.detach().numpy())
+        if len(self.loss) !=0 :
+            self.loss = list()
+            self.perm = list()
+        for act_a, act_b in zip(model_a_act.values(), model_b_act.values()):
+            self._layer_wise(act_a=act_a.detach().numpy(), act_b= act_b.detach().numpy())
         
         return self.perm
 
