@@ -17,25 +17,33 @@ Training
 
 
 def cifar10_loader():
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+    )
     batch_size = 8
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                            download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                              shuffle=True)
+    trainset = torchvision.datasets.CIFAR10(
+        root="./data", train=True, download=True, transform=transform
+    )
+    trainloader = torch.utils.data.DataLoader(
+        trainset, batch_size=batch_size, shuffle=True
+    )
 
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                           download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                             shuffle=False)
+    testset = torchvision.datasets.CIFAR10(
+        root="./data", train=False, download=True, transform=transform
+    )
+    testloader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=False
+    )
 
     return trainloader, testloader
 
-def train(trainloader, model, epochs, model_name='mlp'):
+
+def train(trainloader, model, epochs, model_name="mlp"):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    device = torch.device("cuda:0")
+    model.to(device)
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -44,19 +52,22 @@ def train(trainloader, model, epochs, model_name='mlp'):
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            outputs = model(inputs.to(device))
+            loss = criterion(outputs, labels.to(device))
             loss.backward()
             optimizer.step()
             # print statistics
             running_loss += loss.item()
             if i % 2000 == 1999:
-                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+                print(f"[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}")
                 running_loss = 0.0
     print("Training done! 🤖")
 
-    path = Path('./stash')
+    path = Path("./stash")
     path.mkdir(exist_ok=True, parents=True)
-    torch.save(model.state_dict(), path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'))
-    
+    torch.save(
+        model.state_dict(),
+        path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'),
+    )
+
     return model
