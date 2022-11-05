@@ -16,7 +16,13 @@ Training
 """
 
 
-def cifar10_loader():
+def cifar10_loader()-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:  # type: ignore
+    """
+    _summary_
+
+    :return: _description_
+    :rtype: tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+    """
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     batch_size = 8
