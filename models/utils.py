@@ -3,6 +3,7 @@ import time
 import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
+from pathlib import Path
 
 
 """
@@ -54,7 +55,8 @@ def train(trainloader, model, epochs, model_name='mlp'):
                 running_loss = 0.0
     print("Training done! 🤖")
 
-    PATH = f'./stash/{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'
-    torch.save(model.state_dict(), PATH)
+    path = Path('./stash')
+    path.mkdir(exist_ok=True, parents=True)
+    torch.save(model.state_dict(), path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'))
     
     return model

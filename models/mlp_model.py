@@ -28,7 +28,7 @@ class MLP(nn.Module):
     :rtype: torch.Tensor
     """
     y = torch.flatten(x, 1)
-    y = self.layer_1(x)
+    y = self.layer_1(y)
     y = self.relu_layer_1(y)
     y = self.layer_2(y)
     y = self.relu_layer_2(y)
