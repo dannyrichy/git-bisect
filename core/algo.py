@@ -31,7 +31,7 @@ class ActivationMethod(Permuter):
         """
         # Note that the procrustes algorithm works with the form
         
-        res = permutation(act_b.T, act_a)
+        res = permutation(act_a, act_b)
         self.loss.append(res.get('error'))
         self.perm.append(res.get('t').T) # type: ignore
     

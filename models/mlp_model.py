@@ -53,6 +53,6 @@ def register_hook(mlp_inst:MLP, activations_dict:dict) -> None:
   :type activations_dict: dict
   """
   for name, layer in mlp_inst.named_modules():
-    if name != '':
+    if name.startswith('layer'):
       layer.register_forward_hook(hook=partial(hook_func, activations_dict, name))
       
