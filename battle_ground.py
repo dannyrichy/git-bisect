@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
 from core.algo import ActivationMethod
@@ -6,7 +7,7 @@ from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader, train
 
 if  __name__ == '__main__':
-    trainloader, testloader = cifar10_loader()
+    trainloader, testloader = cifar10_loader(batch_size=8)
     # mlp = train(trainloader, model=mlp, epochs=5)
     
     permuter = ActivationMethod(archi=[512,512, 512, 10], model_width=None)
@@ -30,14 +31,12 @@ if  __name__ == '__main__':
         _ = mlp_model1(inp)
         _ = mlp_model2(inp)
         if hist_perm is None:
-            hist_perm = [torch.eye(i.shape[1], dtype=torch.float64) for i in model1_dict.values()]
-            tmp = model2_dict
-        else:
-            tmp = {key:torch.matmul(hist_perm[ix], value.T.type(torch.DoubleTensor)).T for ix, (key, value) in enumerate(model2_dict.items())}
-        perm = permuter.get_permuation(model1_dict,  tmp)
+            hist_perm = [np.zeros((i.shape[1], i.shape[1]), dtype=np.float64) for i in model1_dict.values()]
+        perm = permuter.get_permuation(model1_dict,  model2_dict)
         cost.append(permuter.get_loss())
-        hist_perm = [torch.matmul(torch.from_numpy(i), j) for i,j in zip(perm, hist_perm)]
+        hist_perm = [i+j for i,j in zip(perm, hist_perm)]
         
-    
-    print(hist_perm)            
+    # Aggreement along row as categorical distribution
+    for p in hist_perm:
+        print(np.max(p, axis=1)/6250)         
     

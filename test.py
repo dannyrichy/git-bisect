@@ -7,7 +7,7 @@ from core.algo import ActivationMethod
 from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader
 
-trainloader, testloader = cifar10_loader()
+trainloader, testloader = cifar10_loader(8)
     # mlp = train(trainloader, model=mlp, epochs=5)
     
 permuter = ActivationMethod(archi=[512,512, 512, 10], model_width=None)

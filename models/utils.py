@@ -16,7 +16,7 @@ Training
 """
 
 
-def cifar10_loader()-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:  # type: ignore
+def cifar10_loader(batch_size:int)-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:  # type: ignore
     """
     _summary_
 
@@ -25,7 +25,6 @@ def cifar10_loader()-> tuple[torch.utils.data.DataLoader, torch.utils.data.DataL
     """
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    batch_size = 8
 
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                             download=True, transform=transform)
