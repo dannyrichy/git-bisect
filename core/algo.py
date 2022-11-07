@@ -1,70 +1,60 @@
 import numpy
 import torch
 from procrustes import permutation
+from procrustes.utils import compute_error
 
+from core.utils import compute_permutation_hungarian
 from helper import timer_func
 
 
 class Permuter:
-    """"
+    """ "
     Parent class for all the methods
     """
-    perm = list()
-    loss = list()
-    def __init__(self, archi:list[int], model_width):
+
+    perm = dict()
+
+    def __init__(self, archi: list[int], model_width):
         self.archi = archi
         self.model_width = model_width
 
 
 class ActivationMethod(Permuter):
+    cost_matrix = dict()
+
     def __init__(self, archi, model_width) -> None:
         super().__init__(archi, model_width)
 
-    def _layer_wise(self, act_a:numpy.ndarray, act_b:numpy.ndarray)->None:
-        """
-        Model B is considered to be permuted
-
-        :param act_a: Activation of Model a layer in the model
-        :type act_a: numpy.ndarray
-        :param act_b: Activation of Model b layer in the model
-        :type act_b: numpy.ndarray
-        """
-        # Note that the procrustes algorithm works with the form
-        
-        res = permutation(act_a, act_b)
-        self.loss.append(res.get('error'))
-        self.perm.append(res.get('t').T) # type: ignore
-    
     @timer_func("Activation method")
-    def get_permuation(self, model_a_act:dict[str, torch.Tensor], model_b_act:dict[str, torch.Tensor]):
+    def get_permuation(self):
         """
         Get's layer wise permutation matrix
-        
-        :param model_a_act: Activations of all layers of model A
-        :type model_a_act: dict
-        
-        :param model_b_act: Activations of all layers of model B
-        :type model_b_act: dict
-        
+
         :return: List of permutation matrix
         :rtype: list[numpy.ndarray]
-        """ 
-        if len(self.loss) !=0 :
-            self.loss = list()
-            self.perm = list()
-        for act_a, act_b in zip(model_a_act.values(), model_b_act.values()):
-            self._layer_wise(act_a=act_a.detach().numpy(), act_b= act_b.detach().numpy())
+        """
+        if len(self.cost_matrix) == 0:
+            raise ValueError("Compute cost matrix first")
         
+        for key in self.cost_matrix.keys():
+            self.perm[key] = compute_permutation_hungarian(self.cost_matrix[key])
+
         return self.perm
 
-    def get_loss(self):
-        """
-        Gets loss value of the operation
+    def evaluate_cost_batch_wise(
+        self, model_a: dict[str, torch.Tensor], model_b: dict[str, torch.Tensor]
+    ) -> None:
+        for key in model_a.keys():
 
-        :return: Loss 
-        :rtype: float
-        """
-        return self.loss
+            if (model_a[key].shape[0] < model_a[key].shape[1]) or (
+                model_b[key].shape[0] < model_b[key].shape[1]
+            ):
+                raise Exception("Oh no! Mr dumbass fucked it up!")
+
+            self.cost_matrix[key] = (
+                self.cost_matrix.get(key, 0) + model_a[key].T @ model_b[key]
+            )
+
 
 class GreedyAlgorithm(Permuter):
     def __init__(self, archi: list[int], model_width) -> None:
@@ -77,20 +67,19 @@ class GreedyAlgorithm(Permuter):
         :type model_width: _type_
         """
         super().__init__(archi, model_width)
-    
+
     def get_permutation(self, model_a, model_b):
         """
         Generate permutation for the weights of model B
 
         :param model_a: Model A
         :type model_a: torch.nn
-        
+
         :param model_b: Model B
         :type model_b: torch.nn
-        
+
         :return: List of permutation of each layer
-        :rtype: 
+        :rtype:
         """
-    
-        
-        return numpy.zeros((2,2))
+
+        return numpy.zeros((2, 2))

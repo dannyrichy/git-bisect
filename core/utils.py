@@ -1,4 +1,6 @@
 import torch
+import numpy
+from scipy.optimize import linear_sum_assignment
 
 
 def loss_barrier(model_a, model_b, loss_func, x, y, lambda_list=None):
@@ -35,3 +37,20 @@ def loss_barrier(model_a, model_b, loss_func, x, y, lambda_list=None):
 
             for lam in lambda_list
     ]
+
+
+def compute_permutation_hungarian(cost_matrix: numpy.ndarray) -> numpy.ndarray:
+        """
+        _summary_
+
+        :param cost_matrix: _description_
+        :type cost_matrix: numpy.ndarray
+        :return: _description_
+        :rtype: numpy.ndarray
+        """
+        row_ind, col_ind = linear_sum_assignment(cost_matrix, maximize=True)
+        # make the permutation matrix by setting the corresponding elements to 1
+        perm = numpy.zeros(cost_matrix.shape)
+        perm[(row_ind, col_ind)] = 1
+        return perm
+        
