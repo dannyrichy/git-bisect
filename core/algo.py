@@ -33,9 +33,10 @@ class ActivationMethod(Permuter):
         :return: List of permutation matrix
         :rtype: list[numpy.ndarray]
         """
-        if len(self.cost_matrix) == 0:
-            raise ValueError("Compute cost matrix first")
-        
+        # TODO: #4 Is this needed? @Adhithyan8
+        # if len(self.cost_matrix) == 0:
+        #     raise ValueError("Compute cost matrix first")
+
         for key in self.cost_matrix.keys():
             self.perm[key] = compute_permutation_hungarian(self.cost_matrix[key])
 

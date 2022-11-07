@@ -7,7 +7,7 @@ from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader, train
 
 if __name__ == "__main__":
-    trainloader, testloader = cifar10_loader(batch_size=512)
+    trainloader, testloader = cifar10_loader(batch_size=8)
     # mlp = train(trainloader, model=mlp, epochs=5)
 
     permuter = ActivationMethod(archi=[512, 512, 512, 10], model_width=None)
