@@ -2,8 +2,7 @@ import numpy as np
 import torch
 
 from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core.algo import ActivationMethod
-from core.utils import _combine_models
+from core import ActivationMethod, loss_barrier
 from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader, train
 
@@ -11,7 +10,7 @@ if __name__ == "__main__":
     train_loader, test_loader = cifar10_loader(batch_size=8)
     # mlp = train(train_loader, model=mlp, epochs=5)
 
-    permuter = ActivationMethod(arch=[512, 512, 512, 10], model_width=None)
+    permuter = ActivationMethod(arch=[512, 512, 512, 10], model_width=4)
 
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
@@ -34,7 +33,9 @@ if __name__ == "__main__":
     permutation_dict = permuter.get_permutation()
 
     # Adding code for permuting weights of layers
-
-    model3 = _combine_models(
-        model1=mlp_model1, model2=mlp_model2, perm_dict=permutation_dict
+    lb = loss_barrier(
+        model1=mlp_model1,
+        model2=mlp_model2,
+        lambda_list=np.linspace(0, 1, 50),
+        perm_dict=permutation_dict,
     )

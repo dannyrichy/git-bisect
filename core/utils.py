@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Callable
+from typing import Callable, Union
 
 import numpy
 import torch
@@ -73,7 +73,7 @@ def _combine_models(
 def loss_barrier(
     model1: MLP,
     model2: MLP,
-    lambda_list: list[float],
+    lambda_list: Union[numpy.ndarray, list[float]],
     perm_dict: dict[str, numpy.ndarray],
 ) -> Callable[[torch.Tensor, torch.Tensor], dict[str, list[torch.Tensor]]]:
     """
@@ -84,7 +84,7 @@ def loss_barrier(
     :param model2: Model 2 whose permutation is taken
     :type model2: MLP
     :param lambda_list: list of lambda values to combine models
-    :type lambda_list: list[float]
+    :type lambda_list: Union[numpy.ndarray, list[float]]
     :param perm_dict: Permutation dictionary
     :type perm_dict: dict[str, numpy.ndarray]
     :return: Function analogous to loss
