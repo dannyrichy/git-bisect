@@ -8,9 +8,9 @@ from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader
 
 trainloader, testloader = cifar10_loader(8)
-    # mlp = train(trainloader, model=mlp, epochs=5)
-    
-permuter = ActivationMethod(archi=[512,512, 512, 10], model_width=None)
+# mlp = train(trainloader, model=mlp, epochs=5)
+
+permuter = ActivationMethod(arch=[512, 512, 512, 10], model_width=None)
 
 mlp_model1, mlp_model2 = MLP(), MLP()
 mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
@@ -35,12 +35,20 @@ for inp, lbl in testloader:
         act_perm = list()
         for i in model1_dict.values():
             hist_perm.append(torch.eye(i.shape[1], dtype=torch.float64))
-            act_perm.append(torch.eye(i.shape[1], dtype=torch.float64)[torch.randperm(i.shape[1])])
-        
-    tmp = {key:torch.matmul(act_perm[ix], value.T.type(torch.DoubleTensor)).T for ix, (key, value) in enumerate(model1_dict.items())}
-    tmp = {key:torch.matmul(hist_perm[ix], value.T).T for ix, (key, value) in enumerate(tmp.items())}
-    perm = permuter.get_permuation(model1_dict,  tmp)
+            act_perm.append(
+                torch.eye(i.shape[1], dtype=torch.float64)[torch.randperm(i.shape[1])]
+            )
+
+    tmp = {
+        key: torch.matmul(act_perm[ix], value.T.type(torch.DoubleTensor)).T
+        for ix, (key, value) in enumerate(model1_dict.items())
+    }
+    tmp = {
+        key: torch.matmul(hist_perm[ix], value.T).T
+        for ix, (key, value) in enumerate(tmp.items())
+    }
+    perm = permuter.get_permutation(model1_dict, tmp)
     cost.append(permuter.get_loss())
-    hist_perm = [torch.matmul(torch.from_numpy(i), j) for i,j in zip(perm, hist_perm)]
+    hist_perm = [torch.matmul(torch.from_numpy(i), j) for i, j in zip(perm, hist_perm)]
 
 print(hist_perm)

@@ -1,41 +1,28 @@
+from functools import partial
+from typing import Callable
+
 import numpy
+import torch
 from scipy.optimize import linear_sum_assignment
 
 from models.mlp_model import MLP
 
 
-def loss_barrier(combined_model:MLP, model1:MLP, model2:MLP, loss_fn,lambda_list:list[float]):
-    # TODO: Write loss barrier @Adhithyan8
-    pass
-
-
-def compute_permutation_hungarian(cost_matrix: numpy.ndarray) -> numpy.ndarray:
+def _combine_models(
+    model1: MLP, model2: MLP, perm_dict: dict[str, numpy.ndarray], lam: float = 0.5
+) -> MLP:
     """
-    _summary_
+    Combines models model1 and model2 as (1-lam)*model1 + lam*model2
 
-    :param cost_matrix: _description_
-    :type cost_matrix: numpy.ndarray
-    :return: _description_
-    :rtype: numpy.ndarray
-    """
-    row_ind, col_ind = linear_sum_assignment(cost_matrix, maximize=True)
-    # make the permutation matrix by setting the corresponding elements to 1
-    perm = numpy.zeros(cost_matrix.shape)
-    perm[(row_ind, col_ind)] = 1
-    return perm
-
-
-def combine_models(model1: MLP, model2: MLP, perm_dict: dict):
-    """
-    Combine models
-
-    :param model1: _description_
+    :param model1: Model 1
     :type model1: MLP
-    :param model2: _description_
+    :param model2: Model 2
     :type model2: MLP
-    :param perm_dict: _description_
-    :type perm_dict: dict
-    :return: _description_
+    :param perm_dict: Permutation dictionary
+    :type perm_dict: dict[str, numpy.ndarray]
+    :param lam: lambda value to combine models by
+    :type lam: float
+    :return: combined model
     :rtype: MLP
     """
     model3 = MLP()
@@ -44,11 +31,50 @@ def combine_models(model1: MLP, model2: MLP, perm_dict: dict):
     model3_state_dict = model3.state_dict()
 
     for key in model3_state_dict.keys():
-        model3_state_dict[key] = (
-            model1_state_dict[key]
-            + perm_dict[key.split(".")[0]] @ model2_state_dict[key]
-        )
+        model3_state_dict[key] = (1 - lam) * model1_state_dict[key] + lam * perm_dict[
+            key.split(".")[0]
+        ] @ model2_state_dict[key]
 
     model3.load_state_dict(model3_state_dict)
 
     return model3
+
+
+def loss_barrier(
+    model1: MLP,
+    model2: MLP,
+    lambda_list: list[float],
+    perm_dict: dict[str, numpy.ndarray],
+) -> Callable[[torch.Tensor, torch.Tensor], list[torch.Tensor]]:
+    """
+    Returns function to calculate loss barrier for all values in lambda_list
+
+    :param model1: Model 1
+    :type model1: MLP
+    :param model2: Model 2 whose permutation is taken
+    :type model2: MLP
+    :param lambda_list: list of lambda values to combine models
+    :type lambda_list: list[float]
+    :param perm_dict: Permutation dictionary
+    :type perm_dict: dict[str, numpy.ndarray]
+    :return: Function analogous to loss
+    :rtype: Callable[[torch.Tensor, torch.Tensor], list[torch.Tensor]]
+    """
+    # TODO: Check if the following loss function is correct
+    # Should it get the logits or the softmax output
+    _combined_model = partial(_combine_models, model1, model2, perm_dict)
+
+    def get_list_loss_barrier(
+        inp: torch.Tensor, out: torch.Tensor
+    ) -> list[torch.Tensor]:
+        _sum_losses = 0.5 * (
+            torch.nn.functional.cross_entropy(model1(inp), out)
+            + torch.nn.functional.cross_entropy(model2(inp), out)
+        )
+        return [
+            torch.nn.functional.cross_entropy(_combined_model(_lam_val)(inp), out)
+            - _sum_losses
+            for _lam_val in lambda_list
+        ]
+
+    return get_list_loss_barrier
