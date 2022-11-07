@@ -3,7 +3,6 @@ from typing import Callable
 
 import numpy
 import torch
-from scipy.optimize import linear_sum_assignment
 
 from models.mlp_model import MLP
 
