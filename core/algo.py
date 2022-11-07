@@ -45,14 +45,15 @@ class ActivationMethod(Permuter):
         self, model_a: dict[str, torch.Tensor], model_b: dict[str, torch.Tensor]
     ) -> None:
         for key in model_a.keys():
-            # TODO: #4 Is this needed? @Adhithyan8    
+            # TODO: #4 Is this needed? @Adhithyan8
             # if (model_a[key].shape[0] < model_a[key].shape[1]) or (
             #     model_b[key].shape[0] < model_b[key].shape[1]
             # ):
             #     raise Exception("Oh no! Mr dumbass fucked it up!")
 
             self.cost_matrix[key] = (
-                self.cost_matrix.get(key, 0) + model_a[key].T @ model_b[key]
+                self.cost_matrix.get(key, 0)
+                + (model_a[key].T @ model_b[key]).detach().numpy()
             )
 
 

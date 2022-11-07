@@ -3,6 +3,7 @@ import torch
 
 from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
 from core.algo import ActivationMethod
+from core.utils import combine_models
 from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader, train
 
@@ -19,6 +20,7 @@ if __name__ == "__main__":
     mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
     mlp_model2.eval()
 
+    # Caution: the below hooked dictionaries changes values every iteration
     model1_dict, model2_dict = dict(), dict()
     register_hook(mlp_inst=mlp_model1, activations_dict=model1_dict)
     register_hook(mlp_inst=mlp_model2, activations_dict=model2_dict)
@@ -29,4 +31,10 @@ if __name__ == "__main__":
 
         permuter.evaluate_cost_batch_wise(model1_dict, model2_dict)
 
-    perm = permuter.get_permuation()
+    permutation_dict = permuter.get_permuation()
+
+    # Adding code for permuting weights of layers
+
+    model3 = combine_models(
+        model1=mlp_model1, model2=mlp_model2, perm_dict=permutation_dict
+    )
