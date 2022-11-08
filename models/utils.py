@@ -53,7 +53,6 @@ def train(
     model_name: str = "mlp",
 ) -> MLP:
     criterion = torch.nn.CrossEntropyLoss()
-    # @Adhithyan8 TODO: #5 Check if it is passed as function or function name
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     for epoch in range(epochs):
