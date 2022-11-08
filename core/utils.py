@@ -1,9 +1,9 @@
-from copy import copy
 from typing import Union
 
 import numpy
 import torch
 
+from config import DEVICE
 from models.mlp_model import MLP
 
 
@@ -22,7 +22,7 @@ class LossBarrier:
         self.permuted_model2 = self._permute_model2(model2)
 
     def _permute_model2(self, model2: MLP) -> MLP:
-        permuted_model = MLP()
+        permuted_model = MLP().to(DEVICE)
         perm_state_dict = permuted_model.state_dict()
         model2_state_dict = model2.state_dict()
         for key in perm_state_dict.keys():
@@ -31,20 +31,21 @@ class LossBarrier:
                 _layer_name, _layer_num = layer_name.split("_")
                 prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
                 perm_state_dict[key] = (
-                    torch.Tensor(self.perm_dict[layer_name])
+                    torch.Tensor(self.perm_dict[layer_name]).to(DEVICE)
                     @ model2_state_dict[key]
-                    @ torch.Tensor(self.perm_dict[prev_layer_name]).T
+                    @ torch.Tensor(self.perm_dict[prev_layer_name]).to(DEVICE).T
                 )
             else:
                 perm_state_dict[key] = (
-                    torch.Tensor(self.perm_dict[layer_name]) @ model2_state_dict[key]
+                    torch.Tensor(self.perm_dict[layer_name]).to(DEVICE)
+                    @ model2_state_dict[key]
                 )
         permuted_model.load_state_dict(perm_state_dict)
         permuted_model.eval()
         return permuted_model
 
     def _common_combination(self, state_dict1, state_dict2, lam):
-        model3 = MLP()
+        model3 = MLP().to(DEVICE)
         model3_state_dict = model3.state_dict()
 
         for key in model3_state_dict.keys():

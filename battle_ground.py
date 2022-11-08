@@ -3,7 +3,7 @@ from functools import reduce
 import numpy as np
 import torch
 
-from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
+from config import DEVICE, MLP_MODEL1_PATH, MLP_MODEL2_PATH
 from core import ActivationMethod, LossBarrier
 from models import MLP, cifar10_loader, register_hook
 
@@ -41,12 +41,12 @@ if __name__ == "__main__":
     # Creating loss_barrier loss function using the above permutation
     # matrix
     lb = LossBarrier(
-        model1=mlp_model1,
-        model2=mlp_model2,
-        lambda_list=np.linspace(0, 1, 50),
+        model1=mlp_model1.to(DEVICE),
+        model2=mlp_model2.to(DEVICE),
+        lambda_list=np.linspace(0, 1, 10),
         perm_dict=permutation_dict,
     )
 
-    res = lb.loss_barrier(cifar10_loader(batch_size=128)[0])
+    res = lb.loss_barrier(cifar10_loader(batch_size=128)[0].to(DEVICE))
 
     print("Done!")
