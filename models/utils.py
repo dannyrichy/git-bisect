@@ -1,10 +1,13 @@
-import torch
 import time
-import torchvision
-import torchvision.transforms as transforms
-import torch.optim as optim
 from pathlib import Path
 
+import torch
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
+
+from config import DEVICE
+from models.mlp_model import MLP
 
 """
 Utilities to help with creating hook
@@ -16,44 +19,53 @@ Training
 """
 
 
-def cifar10_loader():
+def cifar10_loader(batch_size: int) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:  # type: ignore
+    """
+    _summary_
+
+    :return: _description_
+    :rtype: tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+    """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     )
-    batch_size = 8
 
-    trainset = torchvision.datasets.CIFAR10(
+    train_set = torchvision.datasets.CIFAR10(
         root="./data", train=True, download=True, transform=transform
     )
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True
+    train_loader = torch.utils.data.DataLoader(  # type: ignore
+        train_set, batch_size=batch_size, shuffle=True
     )
 
-    testset = torchvision.datasets.CIFAR10(
+    test_set = torchvision.datasets.CIFAR10(
         root="./data", train=False, download=True, transform=transform
     )
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False
+    test_loader = torch.utils.data.DataLoader(  # type: ignore
+        test_set, batch_size=batch_size, shuffle=False
     )
 
-    return trainloader, testloader
+    return train_loader, test_loader
 
 
-def train(trainloader, model, epochs, model_name="mlp"):
+def train(
+    train_loader: torch.utils.data.DataLoader,  # type: ignore
+    model: MLP,
+    epochs: int,
+    model_name: str = "mlp",
+) -> MLP:
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    device = torch.device("cuda:0")
-    model.to(device)
+    model.to(DEVICE)
 
     for epoch in range(epochs):
         running_loss = 0.0
-        for i, data in enumerate(trainloader):
+        for i, data in enumerate(train_loader):
             inputs, labels = data
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
-            outputs = model(inputs.to(device))
-            loss = criterion(outputs, labels.to(device))
+            outputs = model(inputs.to(DEVICE))
+            loss = criterion(outputs, labels.to(DEVICE))
             loss.backward()
             optimizer.step()
             # print statistics
@@ -71,3 +83,28 @@ def train(trainloader, model, epochs, model_name="mlp"):
     )
 
     return model
+
+
+def hook_func(
+    res_dict: dict,
+    name: str,
+    module: torch.nn.modules.Module,
+    inp: torch.Tensor,
+    out: torch.Tensor,
+) -> None:
+    """
+    Recipe for hook function, ensure to call partial on this
+    with dictionary object to store the values
+
+    :param res_dict: _description_
+    :type res_dict: dict
+    :param name:
+    :type name: str
+    :param module: _description_
+    :type module: torch.nn.modules.Module
+    :param inp: _description_
+    :type inp: torch.Tensor
+    :param out: _description_
+    :type out: torch.Tensor
+    """
+    res_dict[name] = out
