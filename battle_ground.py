@@ -4,13 +4,11 @@ import numpy as np
 import torch
 
 from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core import ActivationMethod, loss_barrier
-from models.mlp_model import MLP, register_hook
-from models.utils import cifar10_loader, train
+from core import ActivationMethod, LossBarrier
+from models import MLP, cifar10_loader, register_hook
 
 if __name__ == "__main__":
     train_loader, test_loader = cifar10_loader(batch_size=8)
-    # mlp = train(train_loader, model=mlp, epochs=5)
 
     # TODO: Create checker methods using arch and model_width params
     permuter = ActivationMethod(arch=[512, 512, 512, 10], model_width=4)
@@ -42,11 +40,13 @@ if __name__ == "__main__":
 
     # Creating loss_barrier loss function using the above permutation
     # matrix
-    lb = loss_barrier(
+    lb = LossBarrier(
         model1=mlp_model1,
         model2=mlp_model2,
         lambda_list=np.linspace(0, 1, 50),
         perm_dict=permutation_dict,
     )
 
-    list_res = reduce(lambda x, y: x | y, [lb(inp, lbl) for inp, lbl in train_loader])
+    res = lb.loss_barrier(cifar10_loader(batch_size=512))
+
+    print("Done!")

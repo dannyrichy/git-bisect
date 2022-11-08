@@ -1,5 +1,5 @@
-from functools import partial
-from typing import Callable, Union
+from copy import copy
+from typing import Union
 
 import numpy
 import torch
@@ -7,124 +7,122 @@ import torch
 from models.mlp_model import MLP
 
 
-def _naive_combine_models(model1: MLP, model2: MLP, lam: float = 0.5) -> MLP:
-    """
-    Combine models without permutation
+class LossBarrier:
+    def __init__(
+        self,
+        model1: MLP,
+        model2: MLP,
+        lambda_list: Union[numpy.ndarray, list[float]],
+        perm_dict: dict[str, numpy.ndarray],
+    ) -> None:
+        self.model1 = model1
+        self.model2 = model2
+        self.permuted_model2 = self._permute_model2(model2)
+        self.lambda_list = lambda_list
+        self.perm_dict = perm_dict
 
-    :param model1: Model 1
-    :type model1: MLP
-    :param model2: Model 2
-    :type model2: MLP
-    :param lam: lambda value to combine models by, defaults to 0.5
-    :type lam: float, optional
-    :return: Combined models
-    :rtype: MLP
-    """
-    model3 = MLP()
-    model1_state_dict = model1.state_dict()
-    model2_state_dict = model2.state_dict()
-    model3_state_dict = model3.state_dict()
+    def _permute_model2(self, model2: MLP) -> MLP:
+        permuted_model = MLP()
+        perm_state_dict = permuted_model.state_dict()
+        model2_state_dict = model2.state_dict()
+        for key in perm_state_dict.keys():
+            layer_name, weight_type = key.split(".")
+            if weight_type == "weight" and not layer_name.startswith("1"):
+                _layer_name, _layer_num = layer_name.split("_")
+                prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
+                perm_state_dict[key] = (
+                    torch.Tensor(self.perm_dict[layer_name])
+                    @ model2_state_dict[key]
+                    @ torch.Tensor(self.perm_dict[prev_layer_name]).T
+                )
+            else:
+                perm_state_dict[key] = (
+                    torch.Tensor(self.perm_dict[layer_name]) @ model2_state_dict[key]
+                )
+        permuted_model.load_state_dict(perm_state_dict)
+        permuted_model.eval()
+        return permuted_model
 
-    for key in model3_state_dict.keys():
-        model3_state_dict[key] = (1 - lam) * model1_state_dict[
-            key
-        ] + lam * model2_state_dict[key]
+    def _common_combination(self, state_dict1, state_dict2, lam):
+        model3 = MLP()
+        model3_state_dict = model3.state_dict()
 
-    model3.load_state_dict(model3_state_dict)
+        for key in model3_state_dict.keys():
+            model3_state_dict[key] = (1 - lam) * state_dict1[key] + lam * state_dict2[
+                key
+            ]
 
-    return model3
+        model3.load_state_dict(model3_state_dict)
+        model3.eval()
+        return model3
 
+    def naive_combine_models(self, lam: float = 0.5):
+        """
+        Combine models without permutation
 
-def _combine_models(
-    model1: MLP,
-    model2: MLP,
-    perm_dict: dict[str, numpy.ndarray],
-    lam: float = 0.5,
-) -> MLP:
-    """
-    Combines models model1 and model2 as (1-lam)*model1 + lam*model2
-
-    :param model1: Model 1
-    :type model1: MLP
-    :param model2: Model 2
-    :type model2: MLP
-    :param perm_dict: Permutation dictionary
-    :type perm_dict: dict[str, numpy.ndarray]
-    :param lam: lambda value to combine models by, defaults to 0.5
-    :type lam: float, optional
-    :return: combined model
-    :rtype: MLP
-    """
-    model3 = MLP()
-    model1_state_dict = model1.state_dict()
-    model2_state_dict = model2.state_dict()
-    model3_state_dict = model3.state_dict()
-
-    for key in model3_state_dict.keys():
-        model3_state_dict[key] = (1 - lam) * model1_state_dict[
-            key
-        ] + lam * torch.Tensor(perm_dict[key.split(".")[0]]) @ model2_state_dict[key]
-
-    model3.load_state_dict(model3_state_dict)
-
-    return model3
-
-
-def loss_barrier(
-    model1: MLP,
-    model2: MLP,
-    lambda_list: Union[numpy.ndarray, list[float]],
-    perm_dict: dict[str, numpy.ndarray],
-) -> Callable[[torch.Tensor, torch.Tensor], dict[str, numpy.ndarray]]:
-    """
-    Returns function to calculate loss barrier for all values in lambda_list
-
-    :param model1: Model 1
-    :type model1: MLP
-    :param model2: Model 2 whose permutation is taken
-    :type model2: MLP
-    :param lambda_list: list of lambda values to combine models
-    :type lambda_list: Union[numpy.ndarray, list[float]]
-    :param perm_dict: Permutation dictionary
-    :type perm_dict: dict[str, numpy.ndarray]
-    :return: Function analogous to loss
-    :rtype: Callable[[torch.Tensor, torch.Tensor], dict[str,numpy.ndarray]]
-    """
-    # TODO: Check if the following loss function is correct
-    # Should it get the logits or the softmax output
-    _combined_model = partial(_combine_models, model1, model2, perm_dict)
-    _naive_combined_model = partial(_naive_combine_models, model1, model2)
-
-    def get_list_loss_barrier(
-        inp: torch.Tensor, out: torch.Tensor
-    ) -> dict[str, numpy.ndarray]:
-        _sum_losses = 0.5 * (
-            torch.nn.functional.cross_entropy(model1(inp), out)
-            + torch.nn.functional.cross_entropy(model2(inp), out)
+        :param lam: lambda value to combine models by, defaults to 0.5
+        :type lam: float, optional
+        :return: Combined models
+        :rtype: list[dict]
+        """
+        return self._common_combination(
+            self.model1.state_dict(), self.model2.state_dict(), lam
         )
-        return {
-            "Activation matching": numpy.array(
-                [
-                    (
-                        torch.nn.functional.cross_entropy(
-                            _combined_model(_lam_val)(inp), out
-                        )
-                        - _sum_losses
-                    ).item()
-                    for _lam_val in lambda_list
-                ]
-            ),
-            "Naive matching": numpy.array(
-                [
-                    (
-                        torch.nn.functional.cross_entropy(
-                            _naive_combined_model(_lam_val)(inp), out
-                        )
-                        - _sum_losses
-                    ).item()
-                    for _lam_val in lambda_list
-                ]
-            ),
-        }
 
-    return get_list_loss_barrier
+    def combine_models(self, lam: float = 0.5) -> MLP:
+        """
+        Combines models model1 and model2 as (1-lam)*model1 + lam*model2
+
+        :param lam: lambda value to combine models by, defaults to 0.5
+        :type lam: float, optional
+        :return: combined model
+        :rtype: MLP
+        """
+        return self._common_combination(
+            self.model1.state_dict(), self.permuted_model2.state_dict(), lam
+        )
+
+    def loss_barrier(self, data_loader: torch.util.data.DataLoader):  # type: ignore
+        """
+        Returns function to calculate loss barrier for all values in lambda_list. Ensure that the batch_size is high enough
+
+        :param data_loader:
+        :type data_loader:
+        :return: _description_
+        :rtype: _type_
+        """
+
+        loss_barrier_dict = dict()
+        for inp, out in data_loader:
+            _sum_losses = 0.5 * (
+                torch.nn.functional.cross_entropy(self.model1(inp), out)
+                + torch.nn.functional.cross_entropy(self.model2(inp), out)
+            )
+            loss_barrier_dict["Activation matching"] = loss_barrier_dict.get(
+                "Activation matching", 0
+            ) + numpy.array(
+                [
+                    (
+                        torch.nn.functional.cross_entropy(
+                            self.combine_models(_lam_val)(inp), out
+                        )
+                        - _sum_losses
+                    ).item()
+                    for _lam_val in self.lambda_list
+                ]
+            )
+            loss_barrier_dict["Naive matching"] = loss_barrier_dict.get(
+                "Naive matching", 0
+            ) + numpy.array(
+                [
+                    (
+                        torch.nn.functional.cross_entropy(
+                            self.naive_combine_models(_lam_val)(inp), out
+                        )
+                        - _sum_losses
+                    ).item()
+                    for _lam_val in self.lambda_list
+                ]
+            )
+
+        return loss_barrier_dict
