@@ -39,3 +39,7 @@ if __name__ == "__main__":
         lambda_list=np.linspace(0, 1, 50),
         perm_dict=permutation_dict,
     )
+    
+    list_res = list()
+    for inp,  lbl in train_loader:
+        list_res.append(lb(inp, lbl))

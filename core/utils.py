@@ -61,9 +61,9 @@ def _combine_models(
     model3_state_dict = model3.state_dict()
 
     for key in model3_state_dict.keys():
-        model3_state_dict[key] = (1 - lam) * model1_state_dict[key] + lam * perm_dict[
+        model3_state_dict[key] = (1 - lam) * model1_state_dict[key] + lam * torch.Tensor(perm_dict[
             key.split(".")[0]
-        ] @ model2_state_dict[key]
+        ]) @ model2_state_dict[key]
 
     model3.load_state_dict(model3_state_dict)
 
@@ -75,7 +75,7 @@ def loss_barrier(
     model2: MLP,
     lambda_list: Union[numpy.ndarray, list[float]],
     perm_dict: dict[str, numpy.ndarray],
-) -> Callable[[torch.Tensor, torch.Tensor], dict[str, list[torch.Tensor]]]:
+) -> Callable[[torch.Tensor, torch.Tensor], dict[str, list[float]]]:
     """
     Returns function to calculate loss barrier for all values in lambda_list
 
@@ -88,7 +88,7 @@ def loss_barrier(
     :param perm_dict: Permutation dictionary
     :type perm_dict: dict[str, numpy.ndarray]
     :return: Function analogous to loss
-    :rtype: Callable[[torch.Tensor, torch.Tensor], dict[str,list[torch.Tensor]]]
+    :rtype: Callable[[torch.Tensor, torch.Tensor], dict[str,list[float]]]
     """
     # TODO: Check if the following loss function is correct
     # Should it get the logits or the softmax output
@@ -97,22 +97,22 @@ def loss_barrier(
 
     def get_list_loss_barrier(
         inp: torch.Tensor, out: torch.Tensor
-    ) -> dict[str, list[torch.Tensor]]:
+    ) -> dict[str, list[float]]:
         _sum_losses = 0.5 * (
             torch.nn.functional.cross_entropy(model1(inp), out)
             + torch.nn.functional.cross_entropy(model2(inp), out)
         )
         return {
             "Activation matching": [
-                torch.nn.functional.cross_entropy(_combined_model(_lam_val)(inp), out)
-                - _sum_losses
+                (torch.nn.functional.cross_entropy(_combined_model(_lam_val)(inp), out)
+                - _sum_losses).item()
                 for _lam_val in lambda_list
             ],
             "Naive matching": [
-                torch.nn.functional.cross_entropy(
+                (torch.nn.functional.cross_entropy(
                     _naive_combined_model(_lam_val)(inp), out
                 )
-                - _sum_losses
+                - _sum_losses).item()
                 for _lam_val in lambda_list
             ],
         }
