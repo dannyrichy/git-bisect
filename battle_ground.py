@@ -1,3 +1,5 @@
+from functools import reduce
+
 import numpy as np
 import torch
 
@@ -26,7 +28,7 @@ if __name__ == "__main__":
     register_hook(mlp_inst=mlp_model2, activations_dict=model2_dict)
 
     # TODO: Time the below two methods and get error value
-    # Method 1: Evaluating cost matrix batch wise, values are 
+    # Method 1: Evaluating cost matrix batch wise, values are
     # added element wise
     for inp, lbl in train_loader:
         _ = mlp_model1(inp)
@@ -47,8 +49,4 @@ if __name__ == "__main__":
         perm_dict=permutation_dict,
     )
 
-    # TODO: Convert the logic in storing the result. Ideally shouldn't
-    # be list of dict but rather dict
-    list_res = list()
-    for inp, lbl in train_loader:
-        list_res.append(lb(inp, lbl))
+    list_res = reduce(lambda x, y: x | y, [lb(inp, lbl) for inp, lbl in train_loader])
