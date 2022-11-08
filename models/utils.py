@@ -6,6 +6,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 
+from config import DEVICE
 from models.mlp_model import MLP
 
 """
@@ -47,13 +48,14 @@ def cifar10_loader(batch_size: int) -> tuple[torch.utils.data.DataLoader, torch.
 
 
 def train(
-    train_loader: torch.utils.data.DataLoader,
+    train_loader: torch.utils.data.DataLoader,  # type: ignore
     model: MLP,
     epochs: int,
     model_name: str = "mlp",
 ) -> MLP:
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    model.to(DEVICE)
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -62,8 +64,8 @@ def train(
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            outputs = model(inputs.to(DEVICE))
+            loss = criterion(outputs, labels.to(DEVICE))
             loss.backward()
             optimizer.step()
             # print statistics
@@ -91,7 +93,7 @@ def hook_func(
     out: torch.Tensor,
 ) -> None:
     """
-    Reciepe for hook function, ensure to call partial on this
+    Recipe for hook function, ensure to call partial on this
     with dictionary object to store the values
 
     :param res_dict: _description_
