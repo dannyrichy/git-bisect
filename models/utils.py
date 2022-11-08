@@ -1,11 +1,12 @@
 import time
 from pathlib import Path
-from typing import Type
 
 import torch
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+
+from models.mlp_model import MLP
 
 """
 Utilities to help with creating hook
@@ -47,13 +48,13 @@ def cifar10_loader(batch_size: int) -> tuple[torch.utils.data.DataLoader, torch.
 
 def train(
     train_loader: torch.utils.data.DataLoader,
-    model: Type[torch.nn.Module],
+    model: MLP,
     epochs: int,
     model_name: str = "mlp",
-) -> Type[torch.nn.Module]:
+) -> MLP:
     criterion = torch.nn.CrossEntropyLoss()
     # @Adhithyan8 TODO: #5 Check if it is passed as function or function name
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9) 
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     for epoch in range(epochs):
         running_loss = 0.0
