@@ -47,6 +47,6 @@ if __name__ == "__main__":
         perm_dict=permutation_dict,
     )
 
-    res = lb.loss_barrier(cifar10_loader(batch_size=512))
+    res = lb.loss_barrier(cifar10_loader(batch_size=128)[0])
 
     print("Done!")

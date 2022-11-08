@@ -17,9 +17,9 @@ class LossBarrier:
     ) -> None:
         self.model1 = model1
         self.model2 = model2
-        self.permuted_model2 = self._permute_model2(model2)
         self.lambda_list = lambda_list
         self.perm_dict = perm_dict
+        self.permuted_model2 = self._permute_model2(model2)
 
     def _permute_model2(self, model2: MLP) -> MLP:
         permuted_model = MLP()
@@ -27,7 +27,7 @@ class LossBarrier:
         model2_state_dict = model2.state_dict()
         for key in perm_state_dict.keys():
             layer_name, weight_type = key.split(".")
-            if weight_type == "weight" and not layer_name.startswith("1"):
+            if weight_type == "weight" and not layer_name.endswith("1"):
                 _layer_name, _layer_num = layer_name.split("_")
                 prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
                 perm_state_dict[key] = (
@@ -56,19 +56,6 @@ class LossBarrier:
         model3.eval()
         return model3
 
-    def naive_combine_models(self, lam: float = 0.5):
-        """
-        Combine models without permutation
-
-        :param lam: lambda value to combine models by, defaults to 0.5
-        :type lam: float, optional
-        :return: Combined models
-        :rtype: list[dict]
-        """
-        return self._common_combination(
-            self.model1.state_dict(), self.model2.state_dict(), lam
-        )
-
     def combine_models(self, lam: float = 0.5) -> MLP:
         """
         Combines models model1 and model2 as (1-lam)*model1 + lam*model2
@@ -82,7 +69,7 @@ class LossBarrier:
             self.model1.state_dict(), self.permuted_model2.state_dict(), lam
         )
 
-    def loss_barrier(self, data_loader: torch.util.data.DataLoader):  # type: ignore
+    def loss_barrier(self, data_loader: torch.utils.data.DataLoader):  # type: ignore
         """
         Returns function to calculate loss barrier for all values in lambda_list. Ensure that the batch_size is high enough
 
@@ -91,38 +78,43 @@ class LossBarrier:
         :return: _description_
         :rtype: _type_
         """
-
+        naive_models = [
+            self._common_combination(
+                self.model1.state_dict(), self.model2.state_dict(), lam
+            )
+            for lam in self.lambda_list
+        ]
+        combined_models = [
+            self._common_combination(
+                self.model1.state_dict(), self.permuted_model2.state_dict(), lam
+            )
+            for lam in self.lambda_list
+        ]
         loss_barrier_dict = dict()
+        counter = 0.0
+        n_loss, p_loss = [0.0 for _ in range(len(self.lambda_list))], [
+            0.0 for _ in range(len(self.lambda_list))
+        ]
         for inp, out in data_loader:
-            _sum_losses = 0.5 * (
-                torch.nn.functional.cross_entropy(self.model1(inp), out)
-                + torch.nn.functional.cross_entropy(self.model2(inp), out)
+            _sum_losses = (
+                0.5
+                * (
+                    torch.nn.functional.cross_entropy(self.model1(inp), out)
+                    + torch.nn.functional.cross_entropy(self.model2(inp), out)
+                ).item()
             )
-            loss_barrier_dict["Activation matching"] = loss_barrier_dict.get(
-                "Activation matching", 0
-            ) + numpy.array(
-                [
-                    (
-                        torch.nn.functional.cross_entropy(
-                            self.combine_models(_lam_val)(inp), out
-                        )
-                        - _sum_losses
-                    ).item()
-                    for _lam_val in self.lambda_list
-                ]
-            )
-            loss_barrier_dict["Naive matching"] = loss_barrier_dict.get(
-                "Naive matching", 0
-            ) + numpy.array(
-                [
-                    (
-                        torch.nn.functional.cross_entropy(
-                            self.naive_combine_models(_lam_val)(inp), out
-                        )
-                        - _sum_losses
-                    ).item()
-                    for _lam_val in self.lambda_list
-                ]
-            )
+
+            for ix, (nm, pm) in enumerate(zip(naive_models, combined_models)):
+                n_loss[ix] += (
+                    torch.nn.functional.cross_entropy(nm(inp), out).item() - _sum_losses
+                )
+                p_loss[ix] += (
+                    torch.nn.functional.cross_entropy(pm(inp), out).item() - _sum_losses
+                )
+
+            counter += 1.0
+
+        loss_barrier_dict["Activation matching"] = numpy.array(n_loss) / counter
+        loss_barrier_dict["Naive matching"] = numpy.array(p_loss) / counter
 
         return loss_barrier_dict
