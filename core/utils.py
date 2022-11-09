@@ -100,22 +100,22 @@ class LossBarrier:
             _sum_losses = (
                 0.5
                 * (
-                    torch.nn.functional.cross_entropy(self.model1(inp), out)
-                    + torch.nn.functional.cross_entropy(self.model2(inp), out)
+                    torch.nn.functional.cross_entropy(self.model1(inp.to(DEVICE)), out.to(DEVICE))
+                    + torch.nn.functional.cross_entropy(self.model2(inp.to(DEVICE)), out.to(DEVICE))
                 ).item()
             )
 
             for ix, (nm, pm) in enumerate(zip(naive_models, combined_models)):
                 n_loss[ix] += (
-                    torch.nn.functional.cross_entropy(nm(inp), out).item() - _sum_losses
+                    torch.nn.functional.cross_entropy(nm(inp.to(DEVICE)), out.to(DEVICE)).item() - _sum_losses
                 )
                 p_loss[ix] += (
-                    torch.nn.functional.cross_entropy(pm(inp), out).item() - _sum_losses
+                    torch.nn.functional.cross_entropy(pm(inp.to(DEVICE)), out.to(DEVICE)).item() - _sum_losses
                 )
 
             counter += 1.0
 
-        loss_barrier_dict["Activation matching"] = numpy.array(n_loss) / counter
-        loss_barrier_dict["Naive matching"] = numpy.array(p_loss) / counter
+        loss_barrier_dict["Activation matching"] = numpy.array(p_loss) / counter
+        loss_barrier_dict["Naive matching"] = numpy.array(n_loss) / counter
 
         return loss_barrier_dict
