@@ -1,4 +1,4 @@
-__all__ = ["LossBarrier", "ActivationMethod", "GreedyAlgorithm"]
+__all__ = ["LossBarrier", "ActMatching", "WeightMatching"]
 
-from .algo import ActivationMethod, GreedyAlgorithm
+from .algo import ActMatching, WeightMatching
 from .utils import LossBarrier

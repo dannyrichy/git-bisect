@@ -4,14 +4,14 @@ import numpy as np
 import torch
 
 from config import DEVICE, MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core import ActivationMethod, LossBarrier
+from core import ActMatching, LossBarrier
 from models import MLP, cifar10_loader, register_hook
 
 if __name__ == "__main__":
     train_loader, test_loader = cifar10_loader(batch_size=8)
 
     # TODO: Create checker methods using arch and model_width params
-    permuter = ActivationMethod(arch=[512, 512, 512, 10], model_width=4)
+    permuter = ActMatching(arch=[512, 512, 512, 10])
 
     # Loading individually trained models
     mlp_model1, mlp_model2 = MLP(), MLP()
