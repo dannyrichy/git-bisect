@@ -1,4 +1,11 @@
-__all__ = ["loss_barrier", "ActivationMethod", "GreedyAlgorithm"]
+__all__ = [
+    "loss_barrier",
+    "combine_models",
+    "permute_model",
+    "ActMatching",
+    "WeightMatching",
+    "STEstimator",
+]
 
-from .algo import ActivationMethod, GreedyAlgorithm
-from .utils import loss_barrier
+from .algo import ActMatching, STEstimator, WeightMatching
+from .utils import combine_models, loss_barrier, permute_model

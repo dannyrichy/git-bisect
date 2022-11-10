@@ -1,18 +1,21 @@
+import copy
+
 import numpy
 import torch
 from procrustes.permutation import _compute_permutation_hungarian
 
+from core.utils import combine_models, permute_model
 from helper import timer_func
 
 
 class _Permuter:
     """
-    Parent class
+    Parent class for permutation method
     """
 
     perm = dict()
 
-    def __init__(self, arch: list[int], model_width: int) -> None:
+    def __init__(self, arch: list[int]) -> None:
         """
         To store the state of the architecture and common methods
 
@@ -22,23 +25,21 @@ class _Permuter:
         :type model_width: int
         """
         self.arch = arch
-        self.model_width = model_width
+        self.model_width = len(arch)
 
 
-class ActivationMethod(_Permuter):
+class ActMatching(_Permuter):
 
     cost_matrix = dict()
 
-    def __init__(self, arch: list[int], model_width: int) -> None:
+    def __init__(self, arch: list[int]) -> None:
         """
         Activation method
 
         :param arch: Architecture
         :type arch: list[int]
-        :param model_width: # of layers
-        :type model_width: int
         """
-        super().__init__(arch, model_width)
+        super().__init__(arch)
 
     @timer_func("Activation method")
     def get_permutation(self) -> dict[str, numpy.ndarray]:
@@ -69,67 +70,108 @@ class ActivationMethod(_Permuter):
         :type model2: dict[str, torch.Tensor]
         """
         for key in model1.keys():
-            # TODO: #4 Is this needed? @Adhithyan8
-            # if (model_a[key].shape[0] < model_a[key].shape[1]) or (
-            #     model_b[key].shape[0] < model_b[key].shape[1]
-            # ):
-            #     raise Exception("Oh no! Mr dumb ass fucked it up!")
-
             self.cost_matrix[key] = (
                 self.cost_matrix.get(key, 0)
                 + (model1[key].T @ model2[key]).detach().numpy()
             )
 
 
-class GreedyAlgorithm(_Permuter):
-    def __init__(
-        self, arch: list[int], model_width: int, layer_name: list[str]
-    ) -> None:
+class WeightMatching(_Permuter):
+    layer_look_up = dict()
+
+    def __init__(self, arch: list[int]) -> None:
         """
         _summary_
 
         :param arch: _description_
         :type arch: list[int]
-        :param model_width: _description_
-        :type model_width: int
         """
-        super().__init__(arch, model_width)
+        super().__init__(arch)
 
-        # Initialise permutation matrix
-        self.layer_name = layer_name
-        self.perm = {
-            layer_name[w]: torch.eye(w, dtype=torch.float64) for w in self.arch
-        }
+    def _initialise_perm(self, m_weights: dict[str, torch.Tensor]) -> None:
+        """
+        Initialise permutation matrices
+
+        :param m_weights: _description_
+        :type m_weights: dict[str, torch.Tensor]
+        """
+        for key, val in m_weights.items():
+            layer_name, weight_type = key.split(".")
+            if weight_type == "weight":
+                _layer_name, _layer_num = layer_name.split("_")
+                if int(_layer_num) != self.model_width:
+                    self.perm[layer_name] = torch.eye(val.shape[0])
+                    self.layer_look_up[key] = (
+                        "_".join([_layer_name, str(int(_layer_num) - 1)]),
+                        "_".join([_layer_name, str(int(_layer_num) + 1)]),
+                        (_layer_name, int(_layer_num)),
+                    )
 
     def evaluate_permutation(
-        self, model1_weights: list[torch.Tensor], model2_weights: list[torch.Tensor]
-    ):
+        self,
+        model1_weights: dict[str, torch.Tensor],
+        model2_weights: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """
-        Generate permutation for the weights of model B
+        _summary_
 
-        :param model1_weights: Model A
-        :type model1_weights: torch.nn
-
-        :param model2_weights: Model B
-        :type model2_weights: torch.nn
-
+        :param model1_weights: _description_
+        :type model1_weights: dict[str, torch.Tensor]
+        :param model2_weights: _description_
+        :type model2_weights: dict[str, torch.Tensor]
+        :return: _description_
+        :rtype: dict[str, torch.Tensor]
         """
         # TODO: Check convergence criteria, check for loop
         cntr = 0
-        while cntr < 1000:
-            for i in range(1, self.model_width + 1):
-                _cost_matrix = (
-                    model1_weights[i]
-                    @ self.perm[self.layer_name[i - 1]]
-                    @ model2_weights[i].T
-                    + model1_weights[i + 1].T
-                    @ self.perm[self.layer_name[i + 1]]
-                    @ model2_weights[i + 1]
-                )
-                self.perm[self.layer_name[i]] = torch.Tensor(
-                    _compute_permutation_hungarian(torch.Tensor.numpy(_cost_matrix))
-                )
+        self._initialise_perm(model1_weights)
+        prev_perm = copy.deepcopy(self.perm)
+        abs_diff = numpy.inf
+        while cntr < 1000 and abs_diff > -5.0:
+
+            for key in model1_weights.keys():
+                if key in self.layer_look_up:
+                    _layer_name, _layer_num = self.layer_look_up[key][2]
+                    if _layer_num == 1:
+                        # Ignoring the permutation in the first layer
+                        _cost_matrix = (
+                            model1_weights[key] @ model2_weights[key].T
+                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
+                            @ self.perm[self.layer_look_up[key][1]]
+                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
+                        )
+                    elif _layer_num == self.model_width - 1:
+                        # Ignoring the permutation in the last layer
+                        _cost_matrix = (
+                            model1_weights[key]
+                            @ self.perm[self.layer_look_up[key][0]]
+                            @ model2_weights[key].T
+                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
+                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
+                        )
+                    else:
+                        #  Every other way
+                        _cost_matrix = (
+                            model1_weights[key]
+                            @ self.perm[self.layer_look_up[key][0]]
+                            @ model2_weights[key].T
+                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
+                            @ self.perm[self.layer_look_up[key][1]]
+                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
+                        )
+                    self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
+                        _compute_permutation_hungarian(torch.Tensor.numpy(_cost_matrix))
+                    )
             cntr += 1
+            abs_diff = sum(
+                [
+                    torch.sum(torch.abs(self.perm[key] - prev_perm[key])).item()
+                    for key in self.perm.keys()
+                ]
+            )
+            prev_perm = copy.deepcopy(self.perm)
+
+        return self.perm
 
     def get_permutation(self) -> dict[str, torch.Tensor]:
         """
@@ -138,4 +180,57 @@ class GreedyAlgorithm(_Permuter):
         :return: Dictionary of permutation matrices
         :rtype: dict[str, torch.Tensor]
         """
+        return self.perm
+
+
+class STEstimator(_Permuter):
+    def __init__(self, arch: list[int]) -> None:
+        super().__init__(arch)
+        self.weight_matching = WeightMatching(arch=arch)
+
+    def get_permutation(
+        self,
+        model1: torch.nn.Module,
+        model2: torch.nn.Module,
+        data_loader: torch.utils.data.DataLoader,  # type: ignore
+    ) -> dict[str, torch.Tensor]:
+        """
+        Get permutation matrix for each layer
+
+        :param model1: _description_
+        :type model1: torch.nn.Module
+        :param model2: _description_
+        :type model2: torch.nn.Module
+        :param data_loader: _description_
+        :type data_loader: torch.utils.data.DataLoader
+        :return: _description_
+        :rtype: dict[str, torch.Tensor]
+        """
+        criterion = torch.nn.CrossEntropyLoss()
+        # Initialise model_hat
+        model_hat = copy.deepcopy(model1)
+        for inp, out in data_loader:
+            # Finding the permutation
+            self.perm = self.weight_matching.evaluate_permutation(
+                model1_weights=model_hat.state_dict(),
+                model2_weights=model2.state_dict(),
+            )
+
+            # Finding the combined permuted model
+            merged_model = combine_models(
+                model1=model1,
+                model2=permute_model(model=model2, perm_dict=self.perm),
+                lam=0.5,
+            )
+
+            # Defining the optimiser
+            optim = torch.optim.SGD(
+                params=merged_model.parameters(), lr=0.01, momentum=0.9
+            )
+            logits = merged_model(inp)
+            criterion(logits, out).backward()
+            optim.step()
+
+            model_hat = combine_models(model1=merged_model, model2=model1, lam=-1)
+
         return self.perm

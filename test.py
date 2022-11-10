@@ -3,14 +3,14 @@
 import torch
 
 from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core.algo import ActivationMethod
+from core.algo import ActMatching
 from models.mlp_model import MLP, register_hook
 from models.utils import cifar10_loader
 
 trainloader, testloader = cifar10_loader(8)
 # mlp = train(trainloader, model=mlp, epochs=5)
 
-permuter = ActivationMethod(arch=[512, 512, 512, 10], model_width=None)
+permuter = ActMatching(arch=[512, 512, 512, 10], model_width=None)
 
 mlp_model1, mlp_model2 = MLP(), MLP()
 mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
