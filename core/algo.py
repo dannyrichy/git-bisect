@@ -182,4 +182,6 @@ class STEstimator(_Permuter):
         self, model1: dict[str, torch.Tensor], model2: dict[str, torch.Tensor]
     ):
         model_hat = copy.deepcopy(model1)
-        self.weight_matching.evaluate_permutation(model1_weights=model_hat, self.)
+        self.weight_matching.evaluate_permutation(model1_weights=model_hat, model2_weights=model2)
+        
+        merged_model = 

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from config import DEVICE, MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core import ActMatching, LossBarrier
+from core import ActMatching, combine_models, loss_barrier, permute_model
 from models import MLP, cifar10_loader, register_hook
 
 if __name__ == "__main__":
@@ -40,13 +40,42 @@ if __name__ == "__main__":
 
     # Creating loss_barrier loss function using the above permutation
     # matrix
-    lb = LossBarrier(
-        model1=mlp_model1.to(DEVICE),
-        model2=mlp_model2.to(DEVICE),
-        lambda_list=np.linspace(0, 1, 10),
-        perm_dict=permutation_dict,
-    )
 
-    res = lb.loss_barrier(cifar10_loader(batch_size=128)[0].to(DEVICE))
+    mlp_model1.to(DEVICE)
+    mlp_model2.to(DEVICE)
+
+    perm_model = permute_model(
+        model=mlp_model2,
+        perm_dict={
+            key: torch.Tensor(val).to(DEVICE) for key, val in permutation_dict.items()
+        },
+    )
+    lambda_list = np.arange(0, 1, 10)
+    naive_models = [
+        combine_models(model1=mlp_model1, model2=mlp_model2, lam=lam)
+        for lam in lambda_list
+    ]
+    weight_matched_models = [
+        combine_models(model1=mlp_model1, model2=perm_model, lam=lam)
+        for lam in lambda_list
+    ]
+
+    res = (
+        {
+            "Naive combination": loss_barrier(
+                data_loader=data_loader,
+                model1=mlp_model1,
+                model2=mlp_model2,
+                combined_models=naive_models,
+            ),
+            "Weight Activation Matching": loss_barrier(
+                data_loader=data_loader,
+                model1=mlp_model1,
+                model2=mlp_model2,
+                combined_models=weight_matched_models,
+            ),
+        }
+        for data_loader in cifar10_loader(batch_size=128)
+    )
 
     print("Done!")
