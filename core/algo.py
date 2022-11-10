@@ -1,10 +1,10 @@
 import copy
-from typing import Generator
 
 import numpy
 import torch
 from procrustes.permutation import _compute_permutation_hungarian
 
+from core import combine_models, permute_model
 from helper import timer_func
 
 
@@ -178,10 +178,49 @@ class STEstimator(_Permuter):
         super().__init__(arch)
         self.weight_matching = WeightMatching(arch=arch)
 
-    def _iterate(
-        self, model1: dict[str, torch.Tensor], model2: dict[str, torch.Tensor]
-    ):
+    def get_permutation(
+        self,
+        model1: torch.nn.Module,
+        model2: torch.nn.Module,
+        data_loader: torch.utils.data.DataLoader,  # type: ignore
+    ) -> dict[str, torch.Tensor]:
+        """
+        Get permutation matrix for each layer
+
+        :param model1: _description_
+        :type model1: torch.nn.Module
+        :param model2: _description_
+        :type model2: torch.nn.Module
+        :param data_loader: _description_
+        :type data_loader: torch.utils.data.DataLoader
+        :return: _description_
+        :rtype: dict[str, torch.Tensor]
+        """
+        criterion = torch.nn.CrossEntropyLoss()
+        # Initialise model_hat
         model_hat = copy.deepcopy(model1)
-        self.weight_matching.evaluate_permutation(model1_weights=model_hat, model2_weights=model2)
-        
-        merged_model = 
+        for inp, out in data_loader:
+            # Finding the permutation
+            self.perm = self.weight_matching.evaluate_permutation(
+                model1_weights=model_hat.state_dict(),
+                model2_weights=model2.state_dict(),
+            )
+
+            # Finding the combined permuted model
+            merged_model = combine_models(
+                model1=model1,
+                model2=permute_model(model=model2, perm_dict=self.perm),
+                lam=0.5,
+            )
+
+            # Defining the optimiser
+            optim = torch.optim.SGD(
+                params=merged_model.parameters(), lr=0.01, momentum=0.9
+            )
+            logits = merged_model(inp)
+            criterion(logits, out).backward()
+            optim.step()
+
+            model_hat = combine_models(model1=merged_model, model2=model1, lam=-1)
+
+        return self.perm

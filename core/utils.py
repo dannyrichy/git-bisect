@@ -25,7 +25,6 @@ def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]):
         else:
             perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
     permuted_model.load_state_dict(perm_state_dict)
-    permuted_model.eval()
     return permuted_model
 
 
@@ -42,7 +41,6 @@ def combine_models(model1: torch.nn.Module, model2: torch.nn.Module, lam: float)
         model3_state_dict[key] = (1 - lam) * state_dict1[key] + lam * state_dict2[key]
 
     model3.load_state_dict(model3_state_dict)
-    model3.eval()
     return model3
 
 

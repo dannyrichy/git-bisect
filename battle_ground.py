@@ -50,15 +50,20 @@ if __name__ == "__main__":
             key: torch.Tensor(val).to(DEVICE) for key, val in permutation_dict.items()
         },
     )
+    perm_model.eval()
     lambda_list = np.arange(0, 1, 10)
-    naive_models = [
-        combine_models(model1=mlp_model1, model2=mlp_model2, lam=lam)
-        for lam in lambda_list
-    ]
-    weight_matched_models = [
-        combine_models(model1=mlp_model1, model2=perm_model, lam=lam)
-        for lam in lambda_list
-    ]
+
+    naive_models = list()
+    for lam in lambda_list:
+        tmp = combine_models(model1=mlp_model1, model2=mlp_model2, lam=lam)
+        tmp.eval()
+        naive_models.append(tmp)
+
+    weight_matched_models = list()
+    for lam in lambda_list:
+        tmp = combine_models(model1=mlp_model1, model2=perm_model, lam=lam)
+        tmp.eval()
+        weight_matched_models.append(lam)
 
     res = (
         {
