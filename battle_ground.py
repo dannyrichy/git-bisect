@@ -4,12 +4,18 @@ import numpy as np
 import torch
 
 from config import DEVICE, MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core import ActMatching, combine_models, loss_barrier, permute_model
+from core import (
+    ActMatching,
+    WeightMatching,
+    combine_models,
+    loss_barrier,
+    permute_model,
+)
 from models import MLP, cifar10_loader, register_hook
 
-if __name__ == "__main__":
-    train_loader, test_loader = cifar10_loader(batch_size=8)
 
+def activation_matching() -> list[dict[str, np.ndarray]]:
+    train_loader, test_loader = cifar10_loader(batch_size=8)
     # TODO: Create checker methods using arch and model_width params
     permuter = ActMatching(arch=[512, 512, 512, 10])
 
@@ -65,7 +71,7 @@ if __name__ == "__main__":
         tmp.eval()
         weight_matched_models.append(lam)
 
-    res = (
+    res = [
         {
             "Naive combination": loss_barrier(
                 data_loader=data_loader,
@@ -81,6 +87,29 @@ if __name__ == "__main__":
             ),
         }
         for data_loader in cifar10_loader(batch_size=128)
-    )
+    ]
 
     print("Done!")
+    return res
+
+
+def weight_match():
+    mlp_model1, mlp_model2 = MLP(), MLP()
+    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
+    mlp_model1.to(DEVICE)
+    mlp_model1.eval()
+
+    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
+    mlp_model2.to(DEVICE)
+    mlp_model2.eval()
+
+    weight_matcher = WeightMatching(arch=[512, 512, 512, 10])
+    perm = weight_matcher.evaluate_permutation(
+        model1_weights=mlp_model1.state_dict(), model2_weights=mlp_model2.state_dict()
+    )
+    print("Done !")
+
+
+if __name__ == "__main__":
+    # res = activation_matching()
+    res = weight_match()

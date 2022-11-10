@@ -5,7 +5,6 @@ import numpy
 import torch
 
 from config import DEVICE
-from models.mlp_model import MLP
 
 
 def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]):

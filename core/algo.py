@@ -4,13 +4,13 @@ import numpy
 import torch
 from procrustes.permutation import _compute_permutation_hungarian
 
-from core import combine_models, permute_model
+from core.utils import combine_models, permute_model
 from helper import timer_func
 
 
 class _Permuter:
     """
-    Parent class
+    Parent class for permutation method
     """
 
     perm = dict()
@@ -70,12 +70,6 @@ class ActMatching(_Permuter):
         :type model2: dict[str, torch.Tensor]
         """
         for key in model1.keys():
-            # TODO: #4 Is this needed? @Adhithyan8
-            # if (model_a[key].shape[0] < model_a[key].shape[1]) or (
-            #     model_b[key].shape[0] < model_b[key].shape[1]
-            # ):
-            #     raise Exception("Oh no! Mr dumb ass fucked it up!")
-
             self.cost_matrix[key] = (
                 self.cost_matrix.get(key, 0)
                 + (model1[key].T @ model2[key]).detach().numpy()
@@ -95,16 +89,23 @@ class WeightMatching(_Permuter):
         super().__init__(arch)
 
     def _initialise_perm(self, m_weights: dict[str, torch.Tensor]) -> None:
+        """
+        Initialise permutation matrices
+
+        :param m_weights: _description_
+        :type m_weights: dict[str, torch.Tensor]
+        """
         for key, val in m_weights.items():
             layer_name, weight_type = key.split(".")
-            if weight_type == "weights":
-                self.perm[layer_name] = torch.eye(val.shape[1], dtype=torch.float64)
-            _layer_name, _layer_num = layer_name.split("_")
-            self.layer_look_up[key] = (
-                "_".join([_layer_name, str(int(_layer_num) - 1)]) + "." + weight_type,
-                "_".join([_layer_name, str(int(_layer_num) + 1)]) + "." + weight_type,
-                (_layer_name, int(_layer_num), weight_type),
-            )
+            if weight_type == "weight":
+                _layer_name, _layer_num = layer_name.split("_")
+                if int(_layer_num) != self.model_width:
+                    self.perm[layer_name] = torch.eye(val.shape[0])
+                    self.layer_look_up[key] = (
+                        "_".join([_layer_name, str(int(_layer_num) - 1)]),
+                        "_".join([_layer_name, str(int(_layer_num) + 1)]),
+                        (_layer_name, int(_layer_num)),
+                    )
 
     def evaluate_permutation(
         self,
@@ -124,27 +125,29 @@ class WeightMatching(_Permuter):
         # TODO: Check convergence criteria, check for loop
         cntr = 0
         self._initialise_perm(model1_weights)
-        while cntr < 1000:
+        prev_perm = copy.deepcopy(self.perm)
+        abs_diff = numpy.inf
+        while cntr < 1000 and abs_diff > -5.0:
 
             for key in model1_weights.keys():
-                _layer_name, _layer_num, weight_type = self.layer_look_up[key]
-                if weight_type == "weights":
+                if key in self.layer_look_up:
+                    _layer_name, _layer_num = self.layer_look_up[key][2]
                     if _layer_num == 1:
                         # Ignoring the permutation in the first layer
                         _cost_matrix = (
                             model1_weights[key] @ model2_weights[key].T
-                            + model1_weights[self.layer_look_up[key][1]].T
+                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
                             @ self.perm[self.layer_look_up[key][1]]
-                            @ model2_weights[self.layer_look_up[key][1]]
+                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
                         )
-                    elif _layer_num == self.model_width:
+                    elif _layer_num == self.model_width - 1:
                         # Ignoring the permutation in the last layer
                         _cost_matrix = (
                             model1_weights[key]
                             @ self.perm[self.layer_look_up[key][0]]
                             @ model2_weights[key].T
-                            + model1_weights[self.layer_look_up[key][1]].T
-                            @ model2_weights[self.layer_look_up[key][1]]
+                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
+                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
                         )
                     else:
                         #  Every other way
@@ -152,14 +155,21 @@ class WeightMatching(_Permuter):
                             model1_weights[key]
                             @ self.perm[self.layer_look_up[key][0]]
                             @ model2_weights[key].T
-                            + model1_weights[self.layer_look_up[key][1]].T
+                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
                             @ self.perm[self.layer_look_up[key][1]]
-                            @ model2_weights[self.layer_look_up[key][1]]
+                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
                         )
                     self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
                         _compute_permutation_hungarian(torch.Tensor.numpy(_cost_matrix))
                     )
             cntr += 1
+            abs_diff = sum(
+                [
+                    torch.sum(torch.abs(self.perm[key] - prev_perm[key])).item()
+                    for key in self.perm.keys()
+                ]
+            )
+            prev_perm = copy.deepcopy(self.perm)
 
         return self.perm
 
