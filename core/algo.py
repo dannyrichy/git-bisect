@@ -128,8 +128,8 @@ class WeightMatching(_Permuter):
         self._initialise_perm(model1_weights)
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
-        while cntr < 1000 and abs_diff > -5.0:
-
+        while cntr < 1000 and abs_diff > 5.0:
+            abs_diff = 0.0
             for key in model1_weights.keys():
                 if key in self.layer_look_up:
                     _layer_name, _layer_num = self.layer_look_up[key][2]
@@ -160,6 +160,7 @@ class WeightMatching(_Permuter):
                             @ self.perm[self.layer_look_up[key][1]]
                             @ model2_weights[self.layer_look_up[key][1] + ".weight"]
                         )
+
                     self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
                         _compute_permutation_hungarian(
                             _cost_matrix.detach().cpu().numpy()
@@ -167,13 +168,14 @@ class WeightMatching(_Permuter):
                             else _cost_matrix.numpy()
                         )
                     ).to(DEVICE)
+                    abs_diff += torch.sum(
+                        torch.abs(
+                            self.perm["_".join([_layer_name, str(_layer_num)])]
+                            - prev_perm["_".join([_layer_name, str(_layer_num)])]
+                        )
+                    ).item()
             cntr += 1
-            abs_diff = sum(
-                [
-                    torch.sum(torch.abs(self.perm[key] - prev_perm[key])).item()
-                    for key in self.perm.keys()
-                ]
-            )
+            abs_diff = abs_diff
             prev_perm = copy.deepcopy(self.perm)
 
         return self.perm
