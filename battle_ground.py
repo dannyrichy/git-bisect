@@ -48,7 +48,7 @@ def activation_matching() -> dict[str, torch.Tensor]:
     return {key: torch.Tensor(val).to(DEVICE) for key, val in permutation_dict.items()}
 
 
-def weight_matching():
+def weight_matching() -> dict[str, torch.Tensor]:
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)
@@ -59,10 +59,10 @@ def weight_matching():
     mlp_model2.eval()
 
     weight_matcher = WeightMatching(arch=[512, 512, 512, 10])
-    permutation_dict = weight_matcher.evaluate_permutation(
+    _permutation_dict = weight_matcher.evaluate_permutation(
         model1_weights=mlp_model1.state_dict(), model2_weights=mlp_model2.state_dict()
     )
-    return permutation_dict
+    return _permutation_dict
 
 
 def generate_plots(
@@ -84,7 +84,7 @@ def generate_plots(
         for lam in lambda_list:
             tmp = combine_models(model1=model1, model2=_model2, lam=lam)
             tmp.eval()
-            _models.append(lam)
+            _models.append(tmp)
         _res = {
             "Train": loss_barrier(
                 data_loader=train_loader,
@@ -121,8 +121,8 @@ def generate_plots(
 
 if __name__ == "__main__":
     # res = activation_matching()
-    act_perm = activation_matching()
     weight_perm = weight_matching()
+    act_perm = activation_matching()
 
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
