@@ -14,8 +14,6 @@ class _Permuter:
     Parent class for permutation method
     """
 
-    perm = dict()
-
     def __init__(self, arch: list[int]) -> None:
         """
         To store the state of the architecture and common methods
@@ -27,6 +25,7 @@ class _Permuter:
         """
         self.arch = arch
         self.model_width = len(arch)
+        self.perm = dict()
 
 
 class ActMatching(_Permuter):

@@ -74,7 +74,7 @@ def generate_plots(
 ):
     # Creating loss_barrier loss function using the above permutation
     # matrix
-    lambda_list = np.arange(0, 1, 10)
+    lambda_list = np.linspace(0, 1, 11)
 
     train_loader, test_loader = cifar10_loader(batch_size=128)
     result = dict()
