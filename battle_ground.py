@@ -5,13 +5,8 @@ import numpy as np
 import torch
 
 from config import DEVICE, MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core import (
-    ActMatching,
-    WeightMatching,
-    combine_models,
-    loss_barrier,
-    permute_model,
-)
+from core import (ActMatching, WeightMatching, combine_models, loss_barrier,
+                  permute_model)
 from models import MLP, cifar10_loader, mlp_model, register_hook
 
 
@@ -107,6 +102,7 @@ def generate_plots(
         _perm_model.eval()
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
+        # TODO: #10 @the-nihilist-ninja Issue with weight matching algo 
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
         result["WeightMatching"] = _generate_models(_model2=_perm_model)
