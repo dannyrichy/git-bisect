@@ -3,8 +3,8 @@ import copy
 import numpy
 import torch
 from procrustes.permutation import _compute_permutation_hungarian
-from config import DEVICE
 
+from config import CUDA_AVAILABLE, DEVICE
 from core.utils import combine_models, permute_model
 from helper import timer_func
 
@@ -123,7 +123,7 @@ class WeightMatching(_Permuter):
         :return: _description_
         :rtype: dict[str, torch.Tensor]
         """
-        # TODO: Check if model is in DEVICE  
+        # TODO: Check if model is in DEVICE
         cntr = 0
         self._initialise_perm(model1_weights)
         prev_perm = copy.deepcopy(self.perm)
@@ -161,7 +161,11 @@ class WeightMatching(_Permuter):
                             @ model2_weights[self.layer_look_up[key][1] + ".weight"]
                         )
                     self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
-                        _compute_permutation_hungarian(torch.Tensor.numpy(_cost_matrix))
+                        _compute_permutation_hungarian(
+                            _cost_matrix.detach().cpu().numpy()
+                            if CUDA_AVAILABLE
+                            else _cost_matrix.numpy()
+                        )
                     )
             cntr += 1
             abs_diff = sum(
