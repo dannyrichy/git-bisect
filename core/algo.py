@@ -166,7 +166,7 @@ class WeightMatching(_Permuter):
                             if CUDA_AVAILABLE
                             else _cost_matrix.numpy()
                         )
-                    )
+                    ).to(DEVICE)
             cntr += 1
             abs_diff = sum(
                 [
