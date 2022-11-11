@@ -7,27 +7,39 @@ import torch
 from config import DEVICE
 
 
-def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]):
+def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]) -> torch.nn.Module:
+    """
+    Permute the model with the dictionary
+
+    :param model: Model to be permuted
+    :type model: torch.nn.Module
+    :param perm_dict: Permutation dictionary
+    :type perm_dict: dict[str, torch.Tensor]
+    :return: Permuted model
+    :rtype: torch.nn.Module
+    """
     permuted_model = copy.deepcopy(model).to(DEVICE)
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
+    
     for key in perm_state_dict.keys():
         layer_name, weight_type = key.split(".")
-        if weight_type == "weight" and not layer_name.endswith("1"):
-            _layer_name, _layer_num = layer_name.split("_")
-            prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
-            perm_state_dict[key] = (
-                perm_dict[layer_name]
-                @ model2_state_dict[key]
-                @ perm_dict[prev_layer_name].T
-            )
-        else:
-            perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
+        if layer_name in perm_dict.keys():
+            if weight_type == "weight" and not layer_name.endswith("1"):
+                _layer_name, _layer_num = layer_name.split("_")
+                prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
+                perm_state_dict[key] = (
+                    perm_dict[layer_name]
+                    @ model2_state_dict[key]
+                    @ perm_dict[prev_layer_name].T
+                )
+            else:
+                perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
 
-def combine_models(model1: torch.nn.Module, model2: torch.nn.Module, lam: float):
+def combine_models(model1: torch.nn.Module, model2: torch.nn.Module, lam: float) -> torch.nn.Module:
     # Creating dummy model
     model3 = copy.deepcopy(model1).to(DEVICE)
     model3_state_dict = model3.state_dict()
