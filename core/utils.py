@@ -1,5 +1,4 @@
 import copy
-from typing import Union
 
 import numpy
 import torch
@@ -40,6 +39,18 @@ def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]) ->
 
 
 def combine_models(model1: torch.nn.Module, model2: torch.nn.Module, lam: float) -> torch.nn.Module:
+    """
+    Combine models using linear interpolation (1-lam)*model1 + lam*model2
+
+    :param model1: Model 1
+    :type model1: torch.nn.Module
+    :param model2: Model 2 
+    :type model2: torch.nn.Module
+    :param lam: Lambda value in linear interpolation way
+    :type lam: float
+    :return: Combined model
+    :rtype: torch.nn.Module
+    """
     # Creating dummy model
     model3 = copy.deepcopy(model1).to(DEVICE)
     model3_state_dict = model3.state_dict()
@@ -64,18 +75,17 @@ def loss_barrier(
     """
     Generates data for loss barrier plot
 
-    :param data_loader: _description_
+    :param data_loader: Data Loader
     :type data_loader: torch.utils.data.DataLoader
-    :param model1: _description_
+    :param model1: Model 1
     :type model1: torch.nn.Module
-    :param model2: _description_
+    :param model2: Model 2
     :type model2: torch.nn.Module
-    :param combined_models: _description_
+    :param combined_models: list of combined models for different values of lambda
     :type combined_models: list[torch.nn.Module]
-    :return: _description_
-    :rtype: dict[str, numpy.ndarray]
+    :return: Loss barrier for combined models
+    :rtype: numpy.ndarray
     """
-    loss_barrier_dict = dict()
     counter = 0.0
     loss = [0.0 for _ in range(len(combined_models))]
     for inp, out in data_loader:
