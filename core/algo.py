@@ -3,6 +3,7 @@ import copy
 import numpy
 import torch
 from procrustes.permutation import _compute_permutation_hungarian
+from config import DEVICE
 
 from core.utils import combine_models, permute_model
 from helper import timer_func
@@ -100,7 +101,7 @@ class WeightMatching(_Permuter):
             if weight_type == "weight":
                 _layer_name, _layer_num = layer_name.split("_")
                 if int(_layer_num) != self.model_width:
-                    self.perm[layer_name] = torch.eye(val.shape[0])
+                    self.perm[layer_name] = torch.eye(val.shape[0]).to(DEVICE)
                     self.layer_look_up[key] = (
                         "_".join([_layer_name, str(int(_layer_num) - 1)]),
                         "_".join([_layer_name, str(int(_layer_num) + 1)]),
@@ -122,7 +123,7 @@ class WeightMatching(_Permuter):
         :return: _description_
         :rtype: dict[str, torch.Tensor]
         """
-        # TODO: Check convergence criteria, check for loop
+        # TODO: Check if model is in DEVICE  
         cntr = 0
         self._initialise_perm(model1_weights)
         prev_perm = copy.deepcopy(self.perm)
