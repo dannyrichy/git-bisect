@@ -38,8 +38,8 @@ def activation_matching() -> dict[str, torch.Tensor]:
     # Method 1: Evaluating cost matrix batch wise, values are
     # added element wise
     for inp, lbl in train_loader:
-        _ = mlp_model1(inp)
-        _ = mlp_model2(inp)
+        _ = mlp_model1(inp.to(DEVICE))
+        _ = mlp_model2(inp.to(DEVICE))
 
         # The dictionaries gets erased and updated every time
         permuter.evaluate_permutation(model1_dict, model2_dict)
