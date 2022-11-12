@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     if not ACT_PERM.is_file():
         act_perm = activation_matching()
-        write_file(MLP_PERM_PATH.joinpath("act_perm.pkl"), act_perm)
+        write_file(ACT_PERM, act_perm)
     else:
         act_perm = read_file(ACT_PERM)
 
