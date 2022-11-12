@@ -9,7 +9,6 @@ from config import (
     LAMBDA_ARRAY,
     MLP_MODEL1_PATH,
     MLP_MODEL2_PATH,
-    MLP_PERM_PATH,
     WEIGHT_PERM,
 )
 from core import (
@@ -24,6 +23,12 @@ from models import MLP, cifar10_loader, register_hook
 
 
 def activation_matching() -> dict[str, torch.Tensor]:
+    """
+    Activation matching code for MLP
+
+    :return: Permutation dictionary
+    :rtype: dict[str, torch.Tensor]
+    """
     train_loader, test_loader = cifar10_loader(batch_size=8)
     # TODO: Create checker methods using arch and model_width params
     permuter = ActMatching(arch=[512, 512, 512, 10])
