@@ -3,7 +3,15 @@ from typing import Optional
 import numpy as np
 import torch
 
-from config import ACT_PERM, DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH, MLP_MODEL2_PATH, MLP_PERM_PATH, WEIGHT_PERM
+from config import (
+    ACT_PERM,
+    DEVICE,
+    LAMBDA_ARRAY,
+    MLP_MODEL1_PATH,
+    MLP_MODEL2_PATH,
+    MLP_PERM_PATH,
+    WEIGHT_PERM,
+)
 from core import (
     ActMatching,
     WeightMatching,
@@ -51,6 +59,12 @@ def activation_matching() -> dict[str, torch.Tensor]:
 
 
 def weight_matching() -> dict[str, torch.Tensor]:
+    """
+    weight matching
+
+    :return: Permutation dictionary
+    :rtype: dict[str, torch.Tensor]
+    """
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)
@@ -74,6 +88,22 @@ def generate_plots(
     weight_perm: Optional[dict[str, torch.Tensor]] = None,
     ste_perm: Optional[dict[str, torch.Tensor]] = None,
 ) -> dict[str, dict[str, np.ndarray]]:
+    """
+    Generate data for plots
+
+    :param model1: Model 1
+    :type model1: torch.nn.Module
+    :param model2: Model 2
+    :type model2: torch.nn.Module
+    :param act_perm: Permutation dictionary for Activation Matching, defaults to None
+    :type act_perm: Optional[dict[str, torch.Tensor]], optional
+    :param weight_perm: Permutation dictionary for Weight Matching, defaults to None
+    :type weight_perm: Optional[dict[str, torch.Tensor]], optional
+    :param ste_perm: Permutation dictionary for Straight Through Estimator, defaults to None
+    :type ste_perm: Optional[dict[str, torch.Tensor]], optional
+    :return: Results to use plot
+    :rtype: dict[str, dict[str, np.ndarray]]
+    """
     # Creating loss_barrier loss function using the above permutation
     # matrix
 
@@ -123,13 +153,13 @@ def generate_plots(
 
 if __name__ == "__main__":
     # res = activation_matching()
-    
+
     if not WEIGHT_PERM.is_file():
         weight_perm = weight_matching()
         write_file(WEIGHT_PERM, weight_perm)
-    else: 
-        weight_perm = read_file(WEIGHT_PERM) 
-    
+    else:
+        weight_perm = read_file(WEIGHT_PERM)
+
     if not ACT_PERM.is_file():
         act_perm = activation_matching()
         write_file(MLP_PERM_PATH.joinpath("act_perm.pkl"), act_perm)
