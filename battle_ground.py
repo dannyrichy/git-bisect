@@ -116,6 +116,14 @@ def generate_plots(
     result: dict[str, dict[str, np.ndarray]] = dict()
 
     def _generate_models(_model2: torch.nn.Module) -> dict[str, np.ndarray]:
+        """
+        Internal function to ensure temporary tensors gets erased
+
+        :param _model2: Model 2
+        :type _model2: torch.nn.Module
+        :return: Result dictionary 
+        :rtype: dict[str, np.ndarray]
+        """
         _models = list()
         for lam in LAMBDA_ARRAY:
             tmp = combine_models(model1=model1, model2=_model2, lam=lam)
@@ -157,10 +165,7 @@ def generate_plots(
 
 
 if __name__ == "__main__":
-    # res = activation_matching()
 
-    weight_perm = weight_matching()
-    
     if not WEIGHT_PERM.is_file():
         weight_perm = weight_matching()
         write_file(WEIGHT_PERM, weight_perm)
