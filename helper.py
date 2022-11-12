@@ -40,3 +40,9 @@ def write_file(file_path: pathlib.Path, obj: Any) -> None:
     """
     with open(file_path, "wb") as f:
         pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def read_file(file_path: pathlib.Path) -> Any:
+    with open(file_path, "rb") as f:
+        obj = pickle.load(f)
+    return obj

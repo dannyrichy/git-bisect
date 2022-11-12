@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 
-from config import DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH, MLP_MODEL2_PATH, MLP_PERM_PATH
+from config import ACT_PERM, DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH, MLP_MODEL2_PATH, MLP_PERM_PATH, WEIGHT_PERM
 from core import (
     ActMatching,
     WeightMatching,
@@ -11,7 +11,7 @@ from core import (
     loss_barrier,
     permute_model,
 )
-from helper import write_file
+from helper import read_file, write_file
 from models import MLP, cifar10_loader, register_hook
 
 
@@ -123,11 +123,18 @@ def generate_plots(
 
 if __name__ == "__main__":
     # res = activation_matching()
-    weight_perm = weight_matching()
-    act_perm = activation_matching()
-
-    write_file(MLP_PERM_PATH.joinpath("weight_perm.pkl"), weight_perm)
-    write_file(MLP_PERM_PATH.joinpath("act_perm.pkl"), act_perm)
+    
+    if not WEIGHT_PERM.is_file():
+        weight_perm = weight_matching()
+        write_file(WEIGHT_PERM, weight_perm)
+    else: 
+        weight_perm = read_file(WEIGHT_PERM) 
+    
+    if not ACT_PERM.is_file():
+        act_perm = activation_matching()
+        write_file(MLP_PERM_PATH.joinpath("act_perm.pkl"), act_perm)
+    else:
+        act_perm = read_file(ACT_PERM)
 
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
