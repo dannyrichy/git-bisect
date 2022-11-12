@@ -3,10 +3,15 @@ import copy
 import numpy
 import torch
 
-from config import DEVICE
+from config import DEVICE, LAMBDA_ARRAY
+
+WEIGHT = "weight"
 
 
-def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]) -> torch.nn.Module:
+def permute_model(
+    model: torch.nn.Module,
+    perm_dict: dict[str, torch.Tensor],
+) -> torch.nn.Module:
     """
     Permute the model with the dictionary
 
@@ -17,14 +22,19 @@ def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]) ->
     :return: Permuted model
     :rtype: torch.nn.Module
     """
-    permuted_model = copy.deepcopy(model).to(DEVICE)
+    # Creating model instance to hold the permuted model
+    permuted_model = type(model)().to(DEVICE)
+    permuted_model.eval()
+
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
-    
+
     for key in perm_state_dict.keys():
         layer_name, weight_type = key.split(".")
+
+        # Checking if the permutation has to be carried out
         if layer_name in perm_dict.keys():
-            if weight_type == "weight" and not layer_name.endswith("1"):
+            if weight_type == WEIGHT and not layer_name.endswith("1"):
                 _layer_name, _layer_num = layer_name.split("_")
                 prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
                 perm_state_dict[key] = (
@@ -34,17 +44,20 @@ def permute_model(model: torch.nn.Module, perm_dict: dict[str, torch.Tensor]) ->
                 )
             else:
                 perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
+    
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
 
-def combine_models(model1: torch.nn.Module, model2: torch.nn.Module, lam: float) -> torch.nn.Module:
+def combine_models(
+    model1: torch.nn.Module, model2: torch.nn.Module, lam: float
+) -> torch.nn.Module:
     """
     Combine models using linear interpolation (1-lam)*model1 + lam*model2
 
     :param model1: Model 1
     :type model1: torch.nn.Module
-    :param model2: Model 2 
+    :param model2: Model 2
     :type model2: torch.nn.Module
     :param lam: Lambda value in linear interpolation way
     :type lam: float

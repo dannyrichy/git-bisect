@@ -4,10 +4,15 @@ from typing import Optional
 import numpy as np
 import torch
 
-from config import DEVICE, MLP_MODEL1_PATH, MLP_MODEL2_PATH
-from core import (ActMatching, WeightMatching, combine_models, loss_barrier,
-                  permute_model)
-from models import MLP, cifar10_loader, mlp_model, register_hook
+from config import DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH, MLP_MODEL2_PATH
+from core import (
+    ActMatching,
+    WeightMatching,
+    combine_models,
+    loss_barrier,
+    permute_model,
+)
+from models import MLP, cifar10_loader, register_hook
 
 
 def activation_matching() -> dict[str, torch.Tensor]:
@@ -18,9 +23,11 @@ def activation_matching() -> dict[str, torch.Tensor]:
     # Loading individually trained models
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
+    mlp_model1.to(DEVICE)
     mlp_model1.eval()
 
     mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
+    mlp_model2.to(DEVICE)
     mlp_model2.eval()
 
     model1_dict, model2_dict = dict(), dict()
@@ -35,12 +42,12 @@ def activation_matching() -> dict[str, torch.Tensor]:
         _ = mlp_model2(inp)
 
         # The dictionaries gets erased and updated every time
-        permuter.evaluate_cost_batch_wise(model1_dict, model2_dict)
+        permuter.evaluate_permutation(model1_dict, model2_dict)
 
     # Fetching the permutation
     permutation_dict = permuter.get_permutation()
 
-    return {key: torch.Tensor(val).to(DEVICE) for key, val in permutation_dict.items()}
+    return permutation_dict
 
 
 def weight_matching() -> dict[str, torch.Tensor]:
@@ -66,17 +73,16 @@ def generate_plots(
     act_perm: Optional[dict[str, torch.Tensor]] = None,
     weight_perm: Optional[dict[str, torch.Tensor]] = None,
     ste_perm: Optional[dict[str, torch.Tensor]] = None,
-):
+) -> dict[str, dict[str, np.ndarray]]:
     # Creating loss_barrier loss function using the above permutation
     # matrix
-    lambda_list = np.linspace(0, 1, 11)
 
     train_loader, test_loader = cifar10_loader(batch_size=128)
-    result = dict()
+    result: dict[str, dict[str, np.ndarray]] = dict()
 
     def _generate_models(_model2: torch.nn.Module) -> dict[str, np.ndarray]:
         _models = list()
-        for lam in lambda_list:
+        for lam in LAMBDA_ARRAY:
             tmp = combine_models(model1=model1, model2=_model2, lam=lam)
             tmp.eval()
             _models.append(tmp)
@@ -102,7 +108,7 @@ def generate_plots(
         _perm_model.eval()
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
-        # TODO: #10 @the-nihilist-ninja Issue with weight matching algo 
+        # TODO: #10 @the-nihilist-ninja Issue with weight matching algo
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
         result["WeightMatching"] = _generate_models(_model2=_perm_model)

@@ -5,7 +5,7 @@ import torch
 from procrustes.permutation import _compute_permutation_hungarian
 
 from config import CUDA_AVAILABLE, DEVICE
-from core.utils import combine_models, permute_model
+from core.utils import WEIGHT, combine_models, permute_model
 from helper import timer_func
 
 
@@ -23,15 +23,13 @@ class _Permuter:
         :param model_width: # of layers
         :type model_width: int
         """
-        self.arch = arch
-        self.model_width = len(arch)
-        self.perm = dict()
+        self.arch: list[int] = arch
+        self.model_width: int = len(arch)
+        self.perm: dict[str, torch.Tensor] = dict()
+        self.layer_look_up: dict[str, tuple[str, str, tuple[str, int]]] = dict()
 
 
 class ActMatching(_Permuter):
-
-    cost_matrix = dict()
-
     def __init__(self, arch: list[int]) -> None:
         """
         Activation method
@@ -40,9 +38,10 @@ class ActMatching(_Permuter):
         :type arch: list[int]
         """
         super().__init__(arch)
+        self.cost_matrix: dict[str, torch.Tensor] = dict()
 
     @timer_func("Activation method")
-    def get_permutation(self) -> dict[str, numpy.ndarray]:
+    def get_permutation(self) -> dict[str, torch.Tensor]:
         """
         Get's layer wise permutation matrix
 
@@ -54,11 +53,17 @@ class ActMatching(_Permuter):
             raise ValueError("Compute cost matrix first")
 
         for key in self.cost_matrix.keys():
-            self.perm[key] = _compute_permutation_hungarian(self.cost_matrix[key])
+            self.perm[key] = torch.Tensor(
+                _compute_permutation_hungarian(
+                    self.cost_matrix[key].detach().cpu().numpy()
+                    if CUDA_AVAILABLE
+                    else self.cost_matrix[key].detach().numpy()
+                )
+            ).to(DEVICE)
 
         return self.perm
 
-    def evaluate_cost_batch_wise(
+    def evaluate_permutation(
         self, model1: dict[str, torch.Tensor], model2: dict[str, torch.Tensor]
     ) -> None:
         """
@@ -70,15 +75,12 @@ class ActMatching(_Permuter):
         :type model2: dict[str, torch.Tensor]
         """
         for key in model1.keys():
-            self.cost_matrix[key] = (
-                self.cost_matrix.get(key, 0)
-                + (model1[key].T @ model2[key]).detach().numpy()
+            self.cost_matrix[key] = self.cost_matrix.get(key, 0) + (
+                model1[key].T @ model2[key]
             )
 
 
 class WeightMatching(_Permuter):
-    layer_look_up = dict()
-
     def __init__(self, arch: list[int]) -> None:
         """
         _summary_
@@ -97,7 +99,7 @@ class WeightMatching(_Permuter):
         """
         for key, val in m_weights.items():
             layer_name, weight_type = key.split(".")
-            if weight_type == "weight":
+            if weight_type == WEIGHT:
                 _layer_name, _layer_num = layer_name.split("_")
                 if int(_layer_num) != self.model_width:
                     self.perm[layer_name] = torch.eye(val.shape[0]).to(DEVICE)
@@ -146,8 +148,10 @@ class WeightMatching(_Permuter):
                             model1_weights[key]
                             @ self.perm[self.layer_look_up[key][0]]
                             @ model2_weights[key].T
-                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
-                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
+                            + model1_weights[
+                                self.layer_look_up[key][1] + "." + WEIGHT
+                            ].T
+                            @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
                         )
                     else:
                         #  Every other way
@@ -155,16 +159,18 @@ class WeightMatching(_Permuter):
                             model1_weights[key]
                             @ self.perm[self.layer_look_up[key][0]]
                             @ model2_weights[key].T
-                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
+                            + model1_weights[
+                                self.layer_look_up[key][1] + "." + WEIGHT
+                            ].T
                             @ self.perm[self.layer_look_up[key][1]]
-                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
+                            @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
                         )
 
                     self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
                         _compute_permutation_hungarian(
                             _cost_matrix.detach().cpu().numpy()
                             if CUDA_AVAILABLE
-                            else _cost_matrix.numpy()
+                            else _cost_matrix.detach().numpy()
                         )
                     ).to(DEVICE)
                     abs_diff += torch.sum(
