@@ -5,10 +5,14 @@ import torch
 
 TIME_FLAG = False
 
-MLP_MODEL1_PATH = Path("stash/mlp_20221105-105343.pth")
-MLP_MODEL2_PATH = Path("stash/mlp_20221105-104646.pth")
+_STASH_PATH = Path("stash")
+_STASH_PATH.mkdir(exist_ok=True, parents=True)
 
-MLP_PERM_PATH = Path("stash/mlp_perm")
+MLP_MODEL1_PATH = _STASH_PATH.joinpath("mlp_20221105-105343.pth")
+MLP_MODEL2_PATH = _STASH_PATH.joinpath("mlp_20221105-104646.pth")
+
+MLP_PERM_PATH = _STASH_PATH.joinpath("mlp_perm")
+MLP_PERM_PATH.mkdir(exist_ok=True, parents=True)
 
 CUDA_AVAILABLE = torch.cuda.is_available()
 DEVICE = torch.device("cuda" if CUDA_AVAILABLE else "cpu")
