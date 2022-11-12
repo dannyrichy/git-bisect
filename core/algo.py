@@ -38,7 +38,7 @@ class ActMatching(_Permuter):
         :type arch: list[int]
         """
         super().__init__(arch)
-        self.cost_matrix: dict[str, torch.Tensor] = dict()
+        self.cost_matrix: dict[str, numpy.ndarray] = dict()
 
     @timer_func("Activation method")
     def get_permutation(self) -> dict[str, torch.Tensor]:
@@ -54,11 +54,7 @@ class ActMatching(_Permuter):
 
         for key in self.cost_matrix.keys():
             self.perm[key] = torch.Tensor(
-                _compute_permutation_hungarian(
-                    self.cost_matrix[key].detach().cpu().numpy()
-                    if CUDA_AVAILABLE
-                    else self.cost_matrix[key].detach().numpy()
-                )
+                _compute_permutation_hungarian(self.cost_matrix[key])
             ).to(DEVICE)
 
         return self.perm
@@ -75,9 +71,9 @@ class ActMatching(_Permuter):
         :type model2: dict[str, torch.Tensor]
         """
         for key in model1.keys():
-            self.cost_matrix[key] = self.cost_matrix.get(key, 0) + (
-                model1[key].T @ model2[key]
-            )
+            tmp = model1[key].T @ model2[key]
+            tmp = tmp.detach().cpu().numpy() if CUDA_AVAILABLE else tmp.detach().numpy()
+            self.cost_matrix[key] = self.cost_matrix.get(key, 0) + tmp
 
 
 class WeightMatching(_Permuter):
