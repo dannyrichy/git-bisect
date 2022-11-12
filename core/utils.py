@@ -6,6 +6,7 @@ import torch
 from config import DEVICE, LAMBDA_ARRAY
 
 WEIGHT = "weight"
+BIAS = "bias"
 
 
 def permute_model(

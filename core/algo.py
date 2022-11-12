@@ -5,7 +5,7 @@ import torch
 from procrustes.permutation import _compute_permutation_hungarian
 
 from config import CUDA_AVAILABLE, DEVICE
-from core.utils import WEIGHT, combine_models, permute_model
+from core.utils import BIAS, WEIGHT, combine_models, permute_model
 from helper import timer_func
 
 
@@ -135,9 +135,11 @@ class WeightMatching(_Permuter):
                         # Ignoring the permutation in the first layer
                         _cost_matrix = (
                             model1_weights[key] @ model2_weights[key].T
-                            + model1_weights[self.layer_look_up[key][1] + ".weight"].T
+                            + model1_weights[
+                                self.layer_look_up[key][1] + "." + WEIGHT
+                            ].T
                             @ self.perm[self.layer_look_up[key][1]]
-                            @ model2_weights[self.layer_look_up[key][1] + ".weight"]
+                            @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
                         )
                     elif _layer_num == self.model_width - 1:
                         # Ignoring the permutation in the last layer
@@ -162,6 +164,18 @@ class WeightMatching(_Permuter):
                             @ self.perm[self.layer_look_up[key][1]]
                             @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
                         )
+
+                    # Adding bias term part
+                    _cost_matrix += (
+                        model1_weights[
+                            "_".join([_layer_name, str(_layer_num)]) + "." + BIAS
+                        ].unsqueeze(1)
+                        @ model2_weights[
+                            "_".join([_layer_name, str(_layer_num)]) + "." + BIAS
+                        ]
+                        .unsqueeze(1)
+                        .T
+                    )
 
                     self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
                         _compute_permutation_hungarian(

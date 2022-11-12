@@ -159,6 +159,8 @@ def generate_plots(
 if __name__ == "__main__":
     # res = activation_matching()
 
+    weight_perm = weight_matching()
+    
     if not WEIGHT_PERM.is_file():
         weight_perm = weight_matching()
         write_file(WEIGHT_PERM, weight_perm)
