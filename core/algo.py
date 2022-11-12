@@ -85,7 +85,7 @@ class WeightMatching(_Permuter):
         """
         _summary_
 
-        :param arch: _description_
+        :param arch: Architecture
         :type arch: list[int]
         """
         super().__init__(arch)
@@ -94,7 +94,7 @@ class WeightMatching(_Permuter):
         """
         Initialise permutation matrices
 
-        :param m_weights: _description_
+        :param m_weights: Model weight dictionary to construct the permutation
         :type m_weights: dict[str, torch.Tensor]
         """
         for key, val in m_weights.items():
@@ -115,13 +115,13 @@ class WeightMatching(_Permuter):
         model2_weights: dict[str, torch.Tensor],
     ) -> dict[str, torch.Tensor]:
         """
-        _summary_
+        Evaluate permutation
 
-        :param model1_weights: _description_
+        :param model1_weights: Model 1 weights
         :type model1_weights: dict[str, torch.Tensor]
-        :param model2_weights: _description_
+        :param model2_weights: Model 2 weights
         :type model2_weights: dict[str, torch.Tensor]
-        :return: _description_
+        :return: Permutation dictionary
         :rtype: dict[str, torch.Tensor]
         """
         # TODO: Check if model is in DEVICE
@@ -129,6 +129,7 @@ class WeightMatching(_Permuter):
         self._initialise_perm(model1_weights)
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
+
         while cntr < 1000 and abs_diff > 5.0:
             abs_diff = 0.0
             for key in model1_weights.keys():
@@ -197,6 +198,12 @@ class WeightMatching(_Permuter):
 
 class STEstimator(_Permuter):
     def __init__(self, arch: list[int]) -> None:
+        """
+        Straight Through Estimator
+
+        :param arch: Architecture
+        :type arch: list[int]
+        """
         super().__init__(arch)
         self.weight_matching = WeightMatching(arch=arch)
 
