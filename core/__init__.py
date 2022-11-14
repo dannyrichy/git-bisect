@@ -1,5 +1,5 @@
 __all__ = [
-    "loss_barrier",
+    "get_losses",
     "combine_models",
     "permute_model",
     "ActMatching",
@@ -8,4 +8,4 @@ __all__ = [
 ]
 
 from .algo import ActMatching, STEstimator, WeightMatching
-from .utils import combine_models, loss_barrier, permute_model
+from .utils import combine_models, get_losses, permute_model
