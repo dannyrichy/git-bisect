@@ -36,6 +36,9 @@ def permute_model(
         if weight_type == WEIGHT and not layer_name.endswith("1"):
             _layer_name, _layer_num = layer_name.split("_")
             prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
+            
+            # Considers both column and row permutation if applicable else only column transformation
+            # The latter case happens for last layer
             perm_state_dict[key] = (
                 (
                     perm_dict[layer_name]
