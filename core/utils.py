@@ -48,7 +48,7 @@ def permute_model(
                 if layer_name in perm_dict
                 else model2_state_dict[key] @ perm_dict[prev_layer_name].T
             )
-        else:
+        elif layer_name in perm_dict:
             perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
 
     permuted_model.load_state_dict(perm_state_dict)
