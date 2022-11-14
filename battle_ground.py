@@ -15,7 +15,7 @@ from core import (
     ActMatching,
     WeightMatching,
     combine_models,
-    loss_barrier,
+    get_losses,
     permute_model,
 )
 from helper import read_file, write_file
@@ -130,13 +130,13 @@ def generate_plots(
             tmp.eval()
             _models.append(tmp)
         _res = {
-            "Train": loss_barrier(
+            "Train": get_losses(
                 data_loader=train_loader,
                 model1=model1,
                 model2=model2,
                 combined_models=_models,
             ),
-            "Test": loss_barrier(
+            "Test": get_losses(
                 data_loader=test_loader,
                 model1=model1,
                 model2=model2,

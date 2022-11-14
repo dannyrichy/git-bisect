@@ -45,7 +45,7 @@ def permute_model(
                 )
             else:
                 perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
-    
+
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
@@ -80,10 +80,8 @@ def combine_models(
     return model3
 
 
-def loss_barrier(
+def get_losses(
     data_loader: torch.utils.data.DataLoader,  # type: ignore
-    model1: torch.nn.Module,
-    model2: torch.nn.Module,
     combined_models: list[torch.nn.Module],
 ) -> numpy.ndarray:
     """
@@ -100,29 +98,11 @@ def loss_barrier(
     :return: Loss barrier for combined models
     :rtype: numpy.ndarray
     """
-    counter = 0.0
     loss = [0.0 for _ in range(len(combined_models))]
     for inp, out in data_loader:
-        _sum_losses = (
-            0.5
-            * (
-                torch.nn.functional.cross_entropy(
-                    model1(inp.to(DEVICE)), out.to(DEVICE)
-                )
-                + torch.nn.functional.cross_entropy(
-                    model2(inp.to(DEVICE)), out.to(DEVICE)
-                )
-            ).item()
-        )
-
         for ix, model in enumerate(combined_models):
-            loss[ix] += (
-                torch.nn.functional.cross_entropy(
-                    model(inp.to(DEVICE)), out.to(DEVICE)
-                ).item()
-                - _sum_losses
-            )
+            loss[ix] += torch.nn.functional.cross_entropy(
+                model(inp.to(DEVICE)), out.to(DEVICE), reduction="sum"
+            ).item()
 
-        counter += 1.0
-
-    return numpy.array(loss) / counter
+    return numpy.array(loss) / len(data_loader.dataset)
