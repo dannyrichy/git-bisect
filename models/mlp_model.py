@@ -62,7 +62,8 @@ def register_hook(mlp_inst: MLP, activations_dict: dict) -> None:
 
 
 def mlp_train(
-    train_loader: torch.utils.data.DataLoader,  # type: ignore
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: torch.utils.data.DataLoader,  # type: ignore
     model: MLP,
     epochs: int,
     model_name: str = "mlp",
@@ -85,7 +86,20 @@ def mlp_train(
             # print statistics
             running_loss += loss.item()
             if i % 2000 == 1999:
-                print(f"[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}")
+                val_loss = 0.0
+                corr = 0.0
+                with torch.no_grad():
+                    for j, (inputs, labels) in enumerate(val_loader):
+                        labels = labels.to(DEVICE)
+                        outputs = model(inputs.to(DEVICE))
+                        loss = criterion(outputs, labels)
+                        val_loss += loss.item()
+                        _, preds = torch.max(outputs, dim=1)
+                        corr += torch.sum(preds == labels).item()
+                    accuracy = corr / len(val_loader.dataset)
+                print(
+                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 2000:.3f} val_loss: {val_loss / (j+1):.3f} accuracy: {accuracy*100:.3f}%"
+                )
                 running_loss = 0.0
     print("Training done! 🤖")
 
