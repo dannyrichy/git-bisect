@@ -33,18 +33,20 @@ def permute_model(
     for key in perm_state_dict.keys():
         layer_name, weight_type = key.split(".")
 
-        # Checking if the permutation has to be carried out
-        if layer_name in perm_dict.keys():
-            if weight_type == WEIGHT and not layer_name.endswith("1"):
-                _layer_name, _layer_num = layer_name.split("_")
-                prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
-                perm_state_dict[key] = (
+        if weight_type == WEIGHT and not layer_name.endswith("1"):
+            _layer_name, _layer_num = layer_name.split("_")
+            prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
+            perm_state_dict[key] = (
+                (
                     perm_dict[layer_name]
                     @ model2_state_dict[key]
                     @ perm_dict[prev_layer_name].T
                 )
-            else:
-                perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
+                if layer_name in perm_dict
+                else model2_state_dict[key] @ perm_dict[prev_layer_name].T
+            )
+        else:
+            perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
 
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model

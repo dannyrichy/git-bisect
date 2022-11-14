@@ -11,13 +11,7 @@ from config import (
     MLP_MODEL2_PATH,
     WEIGHT_PERM,
 )
-from core import (
-    ActMatching,
-    WeightMatching,
-    combine_models,
-    get_losses,
-    permute_model,
-)
+from core import ActMatching, WeightMatching, combine_models, get_losses, permute_model
 from helper import read_file, write_file
 from models import MLP, cifar10_loader, register_hook
 
@@ -121,7 +115,7 @@ def generate_plots(
 
         :param _model2: Model 2
         :type _model2: torch.nn.Module
-        :return: Result dictionary 
+        :return: Result dictionary
         :rtype: dict[str, np.ndarray]
         """
         _models = list()
@@ -132,14 +126,10 @@ def generate_plots(
         _res = {
             "Train": get_losses(
                 data_loader=train_loader,
-                model1=model1,
-                model2=model2,
                 combined_models=_models,
             ),
             "Test": get_losses(
                 data_loader=test_loader,
-                model1=model1,
-                model2=model2,
                 combined_models=_models,
             ),
         }
