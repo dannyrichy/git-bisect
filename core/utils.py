@@ -54,7 +54,6 @@ def permute_model(
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
-
 def combine_models(
     model1: torch.nn.Module, model2: torch.nn.Module, lam: float
 ) -> torch.nn.Module:

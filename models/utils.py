@@ -1,15 +1,24 @@
+from typing import Union
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import random_split
 
 
-def cifar10_loader(batch_size: int, validation: bool = False):  # type: ignore
+def cifar10_loader(
+    batch_size: int, validation: bool = False
+) -> Union[
+    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader],  # type: ignore
+    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],  # type: ignore
+]:
     """
     _summary_
 
     :return: _description_
-    :rtype: tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
+    :rtype: Union[
+    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader],
+    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]]
     """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
