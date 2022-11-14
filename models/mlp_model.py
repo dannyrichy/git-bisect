@@ -62,7 +62,7 @@ def register_hook(mlp_inst: MLP, activations_dict: dict) -> None:
 
 
 def mlp_train(
-    train_loader: torch.utils.data.DataLoader,
+    train_loader: torch.utils.data.DataLoader, # type: ignore
     val_loader: torch.utils.data.DataLoader,  # type: ignore
     model: MLP,
     epochs: int,

@@ -12,7 +12,7 @@ from config import (
     WEIGHT_PERM,
 )
 from core import ActMatching, WeightMatching, combine_models, get_losses, permute_model
-from helper import read_file, write_file
+from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader, register_hook
 
 
@@ -180,3 +180,6 @@ if __name__ == "__main__":
     results_dict = generate_plots(
         model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
     )
+    
+    # Creating a plot 
+    plt_dict(results_dict)

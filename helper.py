@@ -1,9 +1,12 @@
 import pathlib
 import pickle
-from time import time
+import time
 from typing import Any
 
-from config import TIME_FLAG
+import numpy
+from matplotlib import pyplot as plt
+
+from config import LAMBDA_ARRAY, TIME_FLAG
 
 
 def timer_func(name: str):
@@ -17,9 +20,9 @@ def timer_func(name: str):
     def inner_func(func):
         def wrap_func(*args, **kwargs):
             if TIME_FLAG:
-                t1 = time()
+                t1 = time.time()
                 result = func(*args, **kwargs)
-                print(f"Method {name} executed in {(time()-t1):.4f}s")
+                print(f"Method {name} executed in {(time.time()-t1):.4f}s")
             else:
                 result = func(*args, **kwargs)
             return result
@@ -46,3 +49,13 @@ def read_file(file_path: pathlib.Path) -> Any:
     with open(file_path, "rb") as f:
         obj = pickle.load(f)
     return obj
+
+
+def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
+    plt.figure()
+    for method, res in results.items():
+        for set, loss_arr in res.items():
+            plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set)
+
+    plt.legend()
+    plt.savefig("Results_" + time.strftime("%Y%m%d-%H%M%S"))
