@@ -256,8 +256,8 @@ class STEstimator(_Permuter):
             optim = torch.optim.SGD(
                 params=merged_model.parameters(), lr=0.01, momentum=0.9
             )
-            logits = merged_model(inp)
-            criterion(logits, out).backward()
+            logits = merged_model(inp.to(DEVICE))
+            criterion(logits, out.to(DEVICE)).backward()
             optim.step()
 
             model_hat = combine_models(model1=merged_model, model2=model1, lam=-1)
