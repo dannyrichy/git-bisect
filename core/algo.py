@@ -1,11 +1,12 @@
 import copy
+from typing import Tuple
 
 import numpy
 import torch
 from procrustes.permutation import _compute_permutation_hungarian
 
 from config import CUDA_AVAILABLE, DEVICE
-from core.utils import BIAS, WEIGHT, combine_models, permute_model
+from core.utils import BIAS, WEIGHT, permute_model
 from helper import timer_func
 
 
@@ -217,12 +218,12 @@ class STEstimator(_Permuter):
         super().__init__(arch)
         self.weight_matching = WeightMatching(arch=arch)
 
-    def get_permutation(
+    def evaluate_permutation(
         self,
         model1: torch.nn.Module,
         model2: torch.nn.Module,
         data_loader: torch.utils.data.DataLoader,  # type: ignore
-    ) -> dict[str, torch.Tensor]:
+    ) -> Tuple[dict[str, torch.Tensor], list]:
         """
         Get permutation matrix for each layer
 
@@ -235,31 +236,60 @@ class STEstimator(_Permuter):
         :return: _description_
         :rtype: dict[str, torch.Tensor]
         """
+
+        # TODO: Check {->} caution: Ensure models are not in eval mode
+
         criterion = torch.nn.CrossEntropyLoss()
         # Initialise model_hat
         model_hat = copy.deepcopy(model1)
-        for inp, out in data_loader:
-            # Finding the permutation
-            self.perm = self.weight_matching.evaluate_permutation(
-                model1_weights=model_hat.state_dict(),
-                model2_weights=model2.state_dict(),
-            )
+        loss_arr = list()
+        
+        for _ in range(5):
+            for inp, out in data_loader:
+                # Finding the permutation
+                self.perm = self.weight_matching.evaluate_permutation(
+                    model1_weights=model_hat.state_dict(),
+                    model2_weights=model2.state_dict(),
+                )
 
-            # Finding the combined permuted model
-            merged_model = combine_models(
-                model1=model1,
-                model2=permute_model(model=model2, perm_dict=self.perm),
-                lam=0.5,
-            )
+                # Finding the projected model
+                projected_model = permute_model(model=model2, perm_dict=self.perm) 
+                
+                merged_model = type(model1)().to(DEVICE)
+                merged_sd = merged_model.state_dict()
+                proj_sd = projected_model.state_dict()
+                model_hat_sd  = model_hat.state_dict()
+                model1_sd = model1.state_dict()                
+                              
+                for key in merged_sd.keys():
+                    # Straight through Estimator core part
+                    merged_sd[key] = 0.5*(
+                        model1_sd[key].requires_grad_(False) + (
+                            proj_sd[key].requires_grad_(False) + (model_hat_sd[key] - model_hat_sd[key].requires_grad_(False))
+                        )
+                        )
+                    # param_merged_model.copy_(
+                    #     0.5
+                    #     * (
+                    #         param_model1.requires_grad_(False)
+                    #         + (
+                    #             param_perm.requires_grad_(False)
+                    #             + (param_hat - param_hat.requires_grad_(False))
+                    #         )
+                    #     )
+                    # )
+                
+                merged_model.load_state_dict(merged_sd)
 
-            # Defining the optimiser
-            optim = torch.optim.SGD(
-                params=merged_model.parameters(), lr=0.01, momentum=0.9
-            )
-            logits = merged_model(inp.to(DEVICE))
-            criterion(logits, out.to(DEVICE)).backward()
-            optim.step()
+                # Defining the optimizer
+                optim = torch.optim.SGD(
+                    params=merged_model.parameters(), lr=0.01, momentum=0.9
+                )
+                logits = merged_model(inp.to(DEVICE))
+                loss = criterion(logits, out.to(DEVICE))
+                loss_arr.append(loss.item())
+                loss.backward()
+                optim.step()
+                optim.zero_grad()
 
-            model_hat = combine_models(model1=merged_model, model2=model1, lam=-1)
-
-        return self.perm
+        return self.perm, loss_arr
