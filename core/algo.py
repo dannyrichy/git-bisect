@@ -3,6 +3,8 @@ from typing import Tuple
 
 import numpy
 import torch
+import functorch
+from torch.nn.functional import cross_entropy
 from procrustes.permutation import _compute_permutation_hungarian
 
 from config import CUDA_AVAILABLE, DEVICE
@@ -239,12 +241,11 @@ class STEstimator(_Permuter):
 
         # TODO: Check {->} caution: Ensure models are not in eval mode
 
-        criterion = torch.nn.CrossEntropyLoss()
         # Initialise model_hat
         model_hat = copy.deepcopy(model1)
         loss_arr = list()
-        
-        for _ in range(5):
+
+        for _ in range(1):
             for inp, out in data_loader:
                 # Finding the permutation
                 self.perm = self.weight_matching.evaluate_permutation(
@@ -253,43 +254,34 @@ class STEstimator(_Permuter):
                 )
 
                 # Finding the projected model
-                projected_model = permute_model(model=model2, perm_dict=self.perm) 
-                
-                merged_model = type(model1)().to(DEVICE)
-                merged_sd = merged_model.state_dict()
-                proj_sd = projected_model.state_dict()
-                model_hat_sd  = model_hat.state_dict()
-                model1_sd = model1.state_dict()                
-                              
-                for key in merged_sd.keys():
-                    # Straight through Estimator core part
-                    merged_sd[key] = 0.5*(
-                        model1_sd[key].requires_grad_(False) + (
-                            proj_sd[key].requires_grad_(False) + (model_hat_sd[key] - model_hat_sd[key].requires_grad_(False))
-                        )
-                        )
-                    # param_merged_model.copy_(
-                    #     0.5
-                    #     * (
-                    #         param_model1.requires_grad_(False)
-                    #         + (
-                    #             param_perm.requires_grad_(False)
-                    #             + (param_hat - param_hat.requires_grad_(False))
-                    #         )
-                    #     )
-                    # )
-                
-                merged_model.load_state_dict(merged_sd)
+                projected_model = permute_model(model=model2, perm_dict=self.perm)
+
+                func, params_1 = functorch.make_functional(model1)
+                _, params_hat = functorch.make_functional(model_hat)
+                _, params_proj = functorch.make_functional(projected_model)
+
+                params_merged = ()
+                for p_1, p_hat, p_proj in zip(params_1, params_hat, params_proj):
+                    params_merged += tuple(
+                        (
+                            0.5
+                            * (
+                                p_1.detach()
+                                + (p_proj.detach() + (p_hat - p_hat.detach()))
+                            )
+                        ).unsqueeze(0)
+                    )
 
                 # Defining the optimizer
-                optim = torch.optim.SGD(
-                    params=merged_model.parameters(), lr=0.01, momentum=0.9
-                )
-                logits = merged_model(inp.to(DEVICE))
-                loss = criterion(logits, out.to(DEVICE))
+                optim = torch.optim.SGD(params=params_hat, lr=0.01, momentum=0.9)
+                logits = func(params_merged, inp.to(DEVICE))
+                loss = cross_entropy(logits, out.to(DEVICE))
                 loss_arr.append(loss.item())
                 loss.backward()
                 optim.step()
                 optim.zero_grad()
+                model_hat.load_state_dict(
+                    {name: param for name, param in zip(func.param_names, params_hat)}
+                )
 
         return self.perm, loss_arr
