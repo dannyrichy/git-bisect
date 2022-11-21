@@ -5,6 +5,7 @@ from pathlib import Path
 import torch
 import torch.optim as optim
 from torch import nn
+from torch.utils.data import DataLoader
 
 from config import DEVICE
 from models.utils import hook_func
@@ -62,8 +63,8 @@ def register_hook(mlp_inst: MLP, activations_dict: dict) -> None:
 
 
 def mlp_train(
-    train_loader: torch.utils.data.DataLoader, # type: ignore
-    val_loader: torch.utils.data.DataLoader,  # type: ignore
+    train_loader: DataLoader,
+    val_loader: DataLoader,
     model: MLP,
     epochs: int,
     model_name: str = "mlp",

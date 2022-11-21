@@ -11,7 +11,14 @@ from config import (
     MLP_MODEL2_PATH,
     WEIGHT_PERM,
 )
-from core import ActMatching, WeightMatching, combine_models, get_losses, permute_model, STEstimator
+from core import (
+    ActMatching,
+    STEstimator,
+    WeightMatching,
+    combine_models,
+    get_losses,
+    permute_model,
+)
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader, register_hook
 
@@ -23,7 +30,7 @@ def activation_matching() -> dict[str, torch.Tensor]:
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
-    train_loader, test_loader = cifar10_loader(batch_size=8)  # type: ignore
+    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
     # TODO: Create checker methods using arch and model_width params
     permuter = ActMatching(arch=[512, 512, 512, 10])
 
@@ -106,7 +113,7 @@ def generate_plots(
     # Creating loss_barrier loss function using the above permutation
     # matrix
 
-    train_loader, test_loader = cifar10_loader(batch_size=128)  # type: ignore
+    train_loader, test_loader, _ = cifar10_loader(batch_size=128)
     result: dict[str, dict[str, np.ndarray]] = dict()
 
     def _generate_models(_model2: torch.nn.Module) -> dict[str, np.ndarray]:
@@ -180,22 +187,22 @@ if __name__ == "__main__":
     # results_dict = generate_plots(
     #     model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
     # )
-    
-    train_loader, test_loader = cifar10_loader(batch_size=8)
-    
+
+    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
+
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)
 
     mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
     mlp_model2.to(DEVICE)
-    
-    ste = STEstimator(arch=[512,512,512,10])
-    perm, losses  = ste.evaluate_permutation(model1=mlp_model1, model2=mlp_model2, data_loader=train_loader)
-    
-    results_dict = generate_plots(
-        model1=mlp_model1, model2=mlp_model2, ste_perm=perm
+
+    ste = STEstimator(arch=[512, 512, 512, 10])
+    perm, losses = ste.evaluate_permutation(
+        model1=mlp_model1, model2=mlp_model2, data_loader=train_loader
     )
-    
-    # Creating a plot 
+
+    results_dict = generate_plots(model1=mlp_model1, model2=mlp_model2, ste_perm=perm)
+
+    # Creating a plot
     plt_dict(results_dict)
