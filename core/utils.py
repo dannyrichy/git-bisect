@@ -2,6 +2,7 @@ import copy
 
 import numpy
 import torch
+from scipy.optimize import linear_sum_assignment
 from torch.utils.data import DataLoader
 
 from config import DEVICE, LAMBDA_ARRAY
@@ -112,3 +113,12 @@ def get_losses(
             ).item()
 
     return numpy.array(loss) / len(data_loader.dataset)  # type: ignore
+
+
+def compute_permutation(cost_matrix: numpy.ndarray) -> numpy.ndarray:
+    # solve linear sum assignment problem to get the row/column indices of optimal assignment
+    row_ind, col_ind = linear_sum_assignment(cost_matrix, maximize=True)
+    # make the permutation matrix by setting the corresponding elements to 1
+    perm = numpy.zeros(cost_matrix.shape)
+    perm[(row_ind, col_ind)] = 1
+    return perm

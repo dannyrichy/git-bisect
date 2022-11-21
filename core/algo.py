@@ -1,15 +1,14 @@
 import copy
 from typing import Tuple
 
+import functorch
 import numpy
 import torch
-from torch.utils.data import DataLoader
-import functorch
 from torch.nn.functional import cross_entropy
-from procrustes.permutation import _compute_permutation_hungarian
+from torch.utils.data import DataLoader
 
 from config import CUDA_AVAILABLE, DEVICE
-from core.utils import BIAS, WEIGHT, permute_model
+from core.utils import BIAS, WEIGHT, compute_permutation, permute_model
 from helper import timer_func
 
 
@@ -58,7 +57,7 @@ class ActMatching(_Permuter):
 
         for key in self.cost_matrix.keys():
             self.perm[key] = torch.Tensor(
-                _compute_permutation_hungarian(self.cost_matrix[key])
+                compute_permutation(self.cost_matrix[key])
             ).to(DEVICE)
 
         return self.perm
@@ -182,7 +181,7 @@ class WeightMatching(_Permuter):
                     )
 
                     self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
-                        _compute_permutation_hungarian(
+                        compute_permutation(
                             _cost_matrix.detach().cpu().numpy()
                             if CUDA_AVAILABLE
                             else _cost_matrix.detach().numpy()
@@ -225,7 +224,7 @@ class STEstimator(_Permuter):
         self,
         model1: torch.nn.Module,
         model2: torch.nn.Module,
-        data_loader: DataLoader,  
+        data_loader: DataLoader,
     ) -> Tuple[dict[str, torch.Tensor], list]:
         """
         Get permutation matrix for each layer
