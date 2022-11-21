@@ -4,7 +4,7 @@ import torch
 
 from config import MLP_MODEL1_PATH, MLP_MODEL2_PATH
 from core.algo import ActMatching
-from models.mlp_model import MLP, register_hook
+from models.mlp import MLP, register_hook
 from models.utils import cifar10_loader
 
 trainloader, testloader = cifar10_loader(8)
