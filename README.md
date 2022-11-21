@@ -14,6 +14,7 @@ Project for course DD2412.
 
 ## Add ons
 Planned add-ons:
+- For activation matching, we perform on the activations before passing it to Activation layer
 - Stay tuned 🤖
 
 
