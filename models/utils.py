@@ -3,22 +3,19 @@ from typing import Union
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.data import random_split
+from torch.utils.data import DataLoader, random_split
 
 
 def cifar10_loader(
     batch_size: int, validation: bool = False
-) -> Union[
-    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader],  # type: ignore
-    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],  # type: ignore
-]:
+) -> Union[tuple[DataLoader, DataLoader, DataLoader], tuple[DataLoader, DataLoader],]:
     """
     _summary_
 
     :return: _description_
     :rtype: Union[
-    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader, torch.utils.data.DataLoader],
-    tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]]
+    tuple[DataLoader, DataLoader, DataLoader],
+    tuple[DataLoader, DataLoader]]
     """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
@@ -31,24 +28,16 @@ def cifar10_loader(
     test_set = torchvision.datasets.CIFAR10(
         root="./data", train=False, download=True, transform=transform
     )
-    test_loader = torch.utils.data.DataLoader(  # type: ignore
-        test_set, batch_size=batch_size, shuffle=False
-    )
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
     if validation:
         train_set, val_set = random_split(train_set, [45000, 5000])
-        val_loader = torch.utils.data.DataLoader(  # type: ignore
-            val_set, batch_size=batch_size, shuffle=True
-        )
+        val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True)
 
-        train_loader = torch.utils.data.DataLoader(  # type: ignore
-            train_set, batch_size=batch_size, shuffle=True
-        )
+        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
         return train_loader, val_loader, test_loader
     else:
-        train_loader = torch.utils.data.DataLoader(  # type: ignore
-            train_set, batch_size=batch_size, shuffle=True
-        )
+        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
         return train_loader, test_loader
 
 

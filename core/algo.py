@@ -3,6 +3,7 @@ from typing import Tuple
 
 import numpy
 import torch
+from torch.utils.data import DataLoader
 import functorch
 from torch.nn.functional import cross_entropy
 from procrustes.permutation import _compute_permutation_hungarian
@@ -224,7 +225,7 @@ class STEstimator(_Permuter):
         self,
         model1: torch.nn.Module,
         model2: torch.nn.Module,
-        data_loader: torch.utils.data.DataLoader,  # type: ignore
+        data_loader: DataLoader,  
     ) -> Tuple[dict[str, torch.Tensor], list]:
         """
         Get permutation matrix for each layer
@@ -234,7 +235,7 @@ class STEstimator(_Permuter):
         :param model2: _description_
         :type model2: torch.nn.Module
         :param data_loader: _description_
-        :type data_loader: torch.utils.data.DataLoader
+        :type data_loader: DataLoader
         :return: _description_
         :rtype: dict[str, torch.Tensor]
         """

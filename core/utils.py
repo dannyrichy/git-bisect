@@ -1,5 +1,5 @@
 import copy
-from turtle import forward
+from torch.utils.data import DataLoader 
 
 import numpy
 import torch
@@ -87,14 +87,14 @@ def combine_models(
 
 
 def get_losses(
-    data_loader: torch.utils.data.DataLoader,  # type: ignore
+    data_loader: DataLoader,
     combined_models: list[torch.nn.Module],
 ) -> numpy.ndarray:
     """
     Generates data for loss barrier plot
 
     :param data_loader: Data Loader
-    :type data_loader: torch.utils.data.DataLoader
+    :type data_loader: DataLoader
     :param model1: Model 1
     :type model1: torch.nn.Module
     :param model2: Model 2
