@@ -1,4 +1,6 @@
 from typing import Optional
+from torchvision.models import vgg16_bn
+from models.vgg import vgg_train
 
 import numpy as np
 import torch
@@ -188,21 +190,10 @@ if __name__ == "__main__":
     #     model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
     # )
 
-    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
+    train_loader, val_loader, test_loader = cifar10_loader(batch_size=256, validation=True)
 
-    mlp_model1, mlp_model2 = MLP(), MLP()
-    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    mlp_model1.to(DEVICE)
+    model = vgg16_bn(num_classes=10)
+    vgg_train(train_loader, val_loader, model, epochs=2, model_name="vgg")
 
-    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    mlp_model2.to(DEVICE)
 
-    ste = STEstimator(arch=[512, 512, 512, 10])
-    perm, losses = ste.evaluate_permutation(
-        model1=mlp_model1, model2=mlp_model2, data_loader=train_loader
-    )
 
-    results_dict = generate_plots(model1=mlp_model1, model2=mlp_model2, ste_perm=perm)
-
-    # Creating a plot
-    plt_dict(results_dict)
