@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import torch
 import torchvision
@@ -8,14 +8,20 @@ from torch.utils.data import DataLoader, random_split
 
 def cifar10_loader(
     batch_size: int, validation: bool = False
-) -> Union[tuple[DataLoader, DataLoader, DataLoader], tuple[DataLoader, DataLoader],]:
+) -> tuple[
+    DataLoader[torchvision.datasets.CIFAR10],
+    DataLoader[torchvision.datasets.CIFAR10],
+    Optional[DataLoader[torchvision.datasets.CIFAR10]],
+]:
     """
-    _summary_
+        _summary_
 
-    :return: _description_
-    :rtype: Union[
-    tuple[DataLoader, DataLoader, DataLoader],
-    tuple[DataLoader, DataLoader]]
+        :return: _description_
+        :rtype: tuple[
+        DataLoader[torchvision.datasets.CIFAR10],
+        DataLoader[torchvision.datasets.CIFAR10],
+        Optional[DataLoader[torchvision.datasets.CIFAR10]],
+    ],
     """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
@@ -38,7 +44,7 @@ def cifar10_loader(
         return train_loader, val_loader, test_loader
     else:
         train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-        return train_loader, test_loader
+        return train_loader, test_loader, None
 
 
 def hook_func(

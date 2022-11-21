@@ -1,8 +1,8 @@
 import copy
-from torch.utils.data import DataLoader 
 
 import numpy
 import torch
+from torch.utils.data import DataLoader
 
 from config import DEVICE, LAMBDA_ARRAY
 
@@ -111,4 +111,4 @@ def get_losses(
                 model(inp.to(DEVICE)), out.to(DEVICE), reduction="sum"
             ).item()
 
-    return numpy.array(loss) / len(data_loader.dataset)
+    return numpy.array(loss) / len(data_loader.dataset)  # type: ignore
