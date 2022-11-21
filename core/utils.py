@@ -1,4 +1,5 @@
 import copy
+from turtle import forward
 
 import numpy
 import torch
@@ -25,7 +26,7 @@ def permute_model(
     """
     # Creating model instance to hold the permuted model
     permuted_model = type(model)().to(DEVICE)
-    permuted_model.eval()
+    # permuted_model.eval()
 
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
@@ -36,7 +37,7 @@ def permute_model(
         if weight_type == WEIGHT and not layer_name.endswith("1"):
             _layer_name, _layer_num = layer_name.split("_")
             prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
-            
+
             # Considers both column and row permutation if applicable else only column transformation
             # The latter case happens for last layer
             perm_state_dict[key] = (
@@ -53,6 +54,7 @@ def permute_model(
 
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
+
 
 def combine_models(
     model1: torch.nn.Module, model2: torch.nn.Module, lam: float

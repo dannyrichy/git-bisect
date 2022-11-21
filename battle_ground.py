@@ -11,7 +11,7 @@ from config import (
     MLP_MODEL2_PATH,
     WEIGHT_PERM,
 )
-from core import ActMatching, WeightMatching, combine_models, get_losses, permute_model
+from core import ActMatching, WeightMatching, combine_models, get_losses, permute_model, STEstimator
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader, register_hook
 
@@ -156,29 +156,45 @@ def generate_plots(
 
 if __name__ == "__main__":
 
-    if not WEIGHT_PERM.is_file():
-        weight_perm = weight_matching()
-        write_file(WEIGHT_PERM, weight_perm)
-    else:
-        weight_perm = read_file(WEIGHT_PERM)
+    # if not WEIGHT_PERM.is_file():
+    #     weight_perm = weight_matching()
+    #     write_file(WEIGHT_PERM, weight_perm)
+    # else:
+    #     weight_perm = read_file(WEIGHT_PERM)
 
-    if not ACT_PERM.is_file():
-        act_perm = activation_matching()
-        write_file(ACT_PERM, act_perm)
-    else:
-        act_perm = read_file(ACT_PERM)
+    # if not ACT_PERM.is_file():
+    #     act_perm = activation_matching()
+    #     write_file(ACT_PERM, act_perm)
+    # else:
+    #     act_perm = read_file(ACT_PERM)
 
+    # mlp_model1, mlp_model2 = MLP(), MLP()
+    # mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
+    # mlp_model1.to(DEVICE)
+    # mlp_model1.eval()
+
+    # mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
+    # mlp_model2.to(DEVICE)
+    # mlp_model2.eval()
+
+    # results_dict = generate_plots(
+    #     model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
+    # )
+    
+    train_loader, test_loader = cifar10_loader(batch_size=8)
+    
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)
-    mlp_model1.eval()
 
     mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
     mlp_model2.to(DEVICE)
-    mlp_model2.eval()
-
+    
+    ste = STEstimator(arch=[512,512,512,10])
+    perm, losses  = ste.evaluate_permutation(model1=mlp_model1, model2=mlp_model2, data_loader=train_loader)
+    
     results_dict = generate_plots(
-        model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
+        model1=mlp_model1, model2=mlp_model2, ste_perm=perm
     )
     
     # Creating a plot 

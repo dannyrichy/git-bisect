@@ -1,11 +1,14 @@
 import copy
+from typing import Tuple
 
 import numpy
 import torch
+import functorch
+from torch.nn.functional import cross_entropy
 from procrustes.permutation import _compute_permutation_hungarian
 
 from config import CUDA_AVAILABLE, DEVICE
-from core.utils import BIAS, WEIGHT, combine_models, permute_model
+from core.utils import BIAS, WEIGHT, permute_model
 from helper import timer_func
 
 
@@ -217,12 +220,12 @@ class STEstimator(_Permuter):
         super().__init__(arch)
         self.weight_matching = WeightMatching(arch=arch)
 
-    def get_permutation(
+    def evaluate_permutation(
         self,
         model1: torch.nn.Module,
         model2: torch.nn.Module,
         data_loader: torch.utils.data.DataLoader,  # type: ignore
-    ) -> dict[str, torch.Tensor]:
+    ) -> Tuple[dict[str, torch.Tensor], list]:
         """
         Get permutation matrix for each layer
 
@@ -235,31 +238,50 @@ class STEstimator(_Permuter):
         :return: _description_
         :rtype: dict[str, torch.Tensor]
         """
-        criterion = torch.nn.CrossEntropyLoss()
+
+        # TODO: Check {->} caution: Ensure models are not in eval mode
+
         # Initialise model_hat
         model_hat = copy.deepcopy(model1)
-        for inp, out in data_loader:
-            # Finding the permutation
-            self.perm = self.weight_matching.evaluate_permutation(
-                model1_weights=model_hat.state_dict(),
-                model2_weights=model2.state_dict(),
-            )
+        loss_arr = list()
 
-            # Finding the combined permuted model
-            merged_model = combine_models(
-                model1=model1,
-                model2=permute_model(model=model2, perm_dict=self.perm),
-                lam=0.5,
-            )
+        for _ in range(1):
+            for inp, out in data_loader:
+                # Finding the permutation
+                self.perm = self.weight_matching.evaluate_permutation(
+                    model1_weights=model_hat.state_dict(),
+                    model2_weights=model2.state_dict(),
+                )
 
-            # Defining the optimiser
-            optim = torch.optim.SGD(
-                params=merged_model.parameters(), lr=0.01, momentum=0.9
-            )
-            logits = merged_model(inp)
-            criterion(logits, out).backward()
-            optim.step()
+                # Finding the projected model
+                projected_model = permute_model(model=model2, perm_dict=self.perm)
 
-            model_hat = combine_models(model1=merged_model, model2=model1, lam=-1)
+                func, params_1 = functorch.make_functional(model1)
+                _, params_hat = functorch.make_functional(model_hat)
+                _, params_proj = functorch.make_functional(projected_model)
 
-        return self.perm
+                params_merged = ()
+                for p_1, p_hat, p_proj in zip(params_1, params_hat, params_proj):
+                    params_merged += tuple(
+                        (
+                            0.5
+                            * (
+                                p_1.detach()
+                                + (p_proj.detach() + (p_hat - p_hat.detach()))
+                            )
+                        ).unsqueeze(0)
+                    )
+
+                # Defining the optimizer
+                optim = torch.optim.SGD(params=params_hat, lr=0.01, momentum=0.9)
+                logits = func(params_merged, inp.to(DEVICE))
+                loss = cross_entropy(logits, out.to(DEVICE))
+                loss_arr.append(loss.item())
+                loss.backward()
+                optim.step()
+                optim.zero_grad()
+                model_hat.load_state_dict(
+                    {name: param for name, param in zip(func.param_names, params_hat)}
+                )
+
+        return self.perm, loss_arr
