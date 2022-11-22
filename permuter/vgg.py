@@ -1,15 +1,14 @@
 from typing import Optional
+from torchvision.models import vgg16_bn
 
 import numpy as np
 import torch
 
 from config import (
-    ACT_PERM,
     DEVICE,
     LAMBDA_ARRAY,
-    MLP_MODEL1_PATH,
-    MLP_MODEL2_PATH,
-    WEIGHT_PERM,
+    VGG_MODEL1_PATH,
+    VGG_MODEL2_PATH,
 )
 from core import (
     ActMatching,
@@ -19,41 +18,41 @@ from core import (
     get_losses,
     permute_model,
 )
-from helper import plt_dict, read_file, write_file
-from models import MLP, cifar10_loader, register_hook
+from models import  cifar10_loader
+from models.vgg import register_hook, train
 
 
 def activation_matching() -> dict[str, torch.Tensor]:
     """
-    Activation matching code for MLP
+    Activation matching code for VGG
 
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
-    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
+    train_loader, test_loader, _ = cifar10_loader(batch_size=256)
     # TODO: Create checker methods using arch and model_width params
     permuter = ActMatching(arch=[512, 512, 512, 10])
 
     # Loading individually trained models
-    mlp_model1, mlp_model2 = MLP(), MLP()
-    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    mlp_model1.to(DEVICE)
-    mlp_model1.eval()
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
+    vgg_model1.to(DEVICE)
+    vgg_model1.eval()
 
-    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    mlp_model2.to(DEVICE)
-    mlp_model2.eval()
+    vgg_model2.load_state_dict(torch.load(VGG_MODEL2_PATH))
+    vgg_model2.to(DEVICE)
+    vgg_model2.eval()
 
     model1_dict, model2_dict = dict(), dict()
-    register_hook(mlp_inst=mlp_model1, activations_dict=model1_dict)
-    register_hook(mlp_inst=mlp_model2, activations_dict=model2_dict)
+    register_hook(inst=vgg_model1, activations_dict=model1_dict)
+    register_hook(inst=vgg_model2, activations_dict=model2_dict)
 
     # TODO: Time the below two methods and get error value
     # Method 1: Evaluating cost matrix batch wise, values are
     # added element wise
     for inp, lbl in train_loader:
-        _ = mlp_model1(inp.to(DEVICE))
-        _ = mlp_model2(inp.to(DEVICE))
+        _ = vgg_model1(inp.to(DEVICE))
+        _ = vgg_model2(inp.to(DEVICE))
 
         # The dictionaries gets erased and updated every time
         permuter.evaluate_permutation(model1_dict, model2_dict)
@@ -71,18 +70,19 @@ def weight_matching() -> dict[str, torch.Tensor]:
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
-    mlp_model1, mlp_model2 = MLP(), MLP()
-    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    mlp_model1.to(DEVICE)
-    mlp_model1.eval()
+    # Loading individually trained models
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
+    vgg_model1.to(DEVICE)
+    vgg_model1.eval()
 
-    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    mlp_model2.to(DEVICE)
-    mlp_model2.eval()
+    vgg_model2.load_state_dict(torch.load(VGG_MODEL2_PATH))
+    vgg_model2.to(DEVICE)
+    vgg_model2.eval()
 
     weight_matcher = WeightMatching(arch=[512, 512, 512, 10])
     _permutation_dict = weight_matcher.evaluate_permutation(
-        model1_weights=mlp_model1.state_dict(), model2_weights=mlp_model2.state_dict()
+        model1_weights=vgg_model1.state_dict(), model2_weights=vgg_model2.state_dict()
     )
     return _permutation_dict
 
@@ -163,46 +163,8 @@ def generate_plots(
 
 if __name__ == "__main__":
 
-    # if not WEIGHT_PERM.is_file():
-    #     weight_perm = weight_matching()
-    #     write_file(WEIGHT_PERM, weight_perm)
-    # else:
-    #     weight_perm = read_file(WEIGHT_PERM)
+    # train_loader, val_loader, test_loader = cifar10_loader(batch_size=256, validation=True, augument=True)
 
-    # if not ACT_PERM.is_file():
-    #     act_perm = activation_matching()
-    #     write_file(ACT_PERM, act_perm)
-    # else:
-    #     act_perm = read_file(ACT_PERM)
-
-    # mlp_model1, mlp_model2 = MLP(), MLP()
-    # mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    # mlp_model1.to(DEVICE)
-    # mlp_model1.eval()
-
-    # mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    # mlp_model2.to(DEVICE)
-    # mlp_model2.eval()
-
-    # results_dict = generate_plots(
-    #     model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
-    # )
-
-    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
-
-    mlp_model1, mlp_model2 = MLP(), MLP()
-    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    mlp_model1.to(DEVICE)
-
-    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    mlp_model2.to(DEVICE)
-
-    ste = STEstimator(arch=[512, 512, 512, 10])
-    perm, losses = ste.evaluate_permutation(
-        model1=mlp_model1, model2=mlp_model2, data_loader=train_loader
-    )
-
-    results_dict = generate_plots(model1=mlp_model1, model2=mlp_model2, ste_perm=perm)
-
-    # Creating a plot
-    plt_dict(results_dict)
+    # model = vgg16_bn(num_classes=10)
+    # train(train_loader, val_loader, model, epochs=20, model_name="vgg")
+    activation_matching()
