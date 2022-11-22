@@ -6,8 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.models import vgg16_bn
 
-from config import (BIAS, DEVICE, LAMBDA_ARRAY, VGG_MODEL1_PATH,
-                    VGG_MODEL2_PATH, WEIGHT)
+from config import BIAS, DEVICE, LAMBDA_ARRAY, VGG_MODEL1_PATH, VGG_MODEL2_PATH, WEIGHT
 from models import cifar10_loader
 from models.vgg import register_hook, train
 from permuter._algo import ActMatching, STEstimator, WeightMatching
@@ -114,6 +113,7 @@ def get_losses(
             ).item()
 
     return np.array(loss) / len(data_loader.dataset)  # type: ignore
+
 
 def activation_matching() -> dict[str, torch.Tensor]:
     """
@@ -262,7 +262,7 @@ def run():
     # model = vgg16_bn(num_classes=10)
     # train(train_loader, val_loader, model, epochs=20, model_name="vgg")
     act_perm = activation_matching()
-    
+
     vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
@@ -272,4 +272,6 @@ def run():
     vgg_model2.to(DEVICE)
     vgg_model2.eval()
 
-    results_dict = generate_plots(model1=vgg_model1, model2=vgg_model2, act_perm=act_perm)
+    results_dict = generate_plots(
+        model1=vgg_model1, model2=vgg_model2, act_perm=act_perm
+    )

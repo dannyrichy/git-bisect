@@ -46,7 +46,7 @@ def cifar10_loader(
     else:
         train_set = torchvision.datasets.CIFAR10(
             root="./data", train=True, download=True, transform=transform
-        ) 
+        )
 
     test_set = torchvision.datasets.CIFAR10(
         root="./data", train=False, download=True, transform=transform
@@ -95,4 +95,6 @@ def hook_func(
     :type out: torch.Tensor
     """
     # Assuming the shape can either be of dimension 2 or 4
-    res_dict[name] = out if len(out.shape) == 2 else rearrange(out, 'b c w h -> (b w h) c')
+    res_dict[name] = (
+        out if len(out.shape) == 2 else rearrange(out, "b c w h -> (b w h) c")
+    )

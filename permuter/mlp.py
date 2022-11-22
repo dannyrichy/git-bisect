@@ -5,8 +5,16 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from config import (ACT_PERM, BIAS, DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH,
-                    MLP_MODEL2_PATH, WEIGHT, WEIGHT_PERM)
+from config import (
+    ACT_PERM,
+    BIAS,
+    DEVICE,
+    LAMBDA_ARRAY,
+    MLP_MODEL1_PATH,
+    MLP_MODEL2_PATH,
+    WEIGHT,
+    WEIGHT_PERM,
+)
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
 from models.mlp import register_hook
@@ -114,7 +122,6 @@ def get_losses(
             ).item()
 
     return np.array(loss) / len(data_loader.dataset)  # type: ignore
-
 
 
 def activation_matching() -> dict[str, torch.Tensor]:
@@ -293,7 +300,10 @@ def run():
 
     ste = STEstimator(arch=[512, 512, 512, 10])
     perm, losses = ste.evaluate_permutation(
-        model1=mlp_model1, model2=mlp_model2, data_loader=train_loader, permute_model= permute_model
+        model1=mlp_model1,
+        model2=mlp_model2,
+        data_loader=train_loader,
+        permute_model=permute_model,
     )
 
     results_dict = generate_plots(model1=mlp_model1, model2=mlp_model2, ste_perm=perm)

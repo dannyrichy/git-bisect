@@ -216,7 +216,7 @@ class WeightMatching(_Permuter):
         :rtype: dict[str, torch.Tensor]
         """
         return self.perm
-    
+
 
 class STEstimator(_Permuter):
     def __init__(self, arch: list[int]) -> None:
