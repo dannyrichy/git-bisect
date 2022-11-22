@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
-from torchvision.models import vgg16_bn
+from torchvision.models import VGG
 
 from config import DEVICE
 from models.utils import hook_func
@@ -50,20 +50,20 @@ LOOK_UP_WEIGHTS = {
 }
 
 
-def register_hook(mlp_inst: Type[vgg16_bn], activations_dict: dict) -> None:
+def register_hook(inst: VGG, activations_dict: dict) -> None:
     """
     Function to register hook
 
-    :param mlp_inst: _description_
-    :type mlp_inst: MLP
+    :param inst: _description_
+    :type inst: MLP
     :param activations_dict: _description_
     :type activations_dict: dict
     """
-    for name, module_par in mlp_inst.named_modules():
+    for name, module_par in inst.named_modules():
         for child_name, child_module in module_par.named_modules():
             tmp = name + "." + child_name
             if tmp in LOOK_UP_LAYER:
-                module_par.register_forward_hook(
+                child_module.register_forward_hook(
                     hook=partial(hook_func, activations_dict, tmp)
                 )
 
@@ -71,7 +71,7 @@ def register_hook(mlp_inst: Type[vgg16_bn], activations_dict: dict) -> None:
 # loads model with random weights (DELETE)
 
 
-def vgg_train(
+def train(
     train_loader: DataLoader,
     val_loader: DataLoader,
     model: torch.nn.Module,

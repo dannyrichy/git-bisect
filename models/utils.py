@@ -4,6 +4,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, random_split
+from einops import rearrange 
 
 
 def cifar10_loader(
@@ -39,9 +40,13 @@ def cifar10_loader(
             ]
         )
 
-    train_set = torchvision.datasets.CIFAR10(
-        root="./data", train=True, download=True, transform=train_transform
-    )
+        train_set = torchvision.datasets.CIFAR10(
+            root="./data", train=True, download=True, transform=train_transform
+        )
+    else:
+        train_set = torchvision.datasets.CIFAR10(
+            root="./data", train=True, download=True, transform=transform
+        ) 
 
     test_set = torchvision.datasets.CIFAR10(
         root="./data", train=False, download=True, transform=transform
@@ -89,4 +94,5 @@ def hook_func(
     :param out: _description_
     :type out: torch.Tensor
     """
-    res_dict[name] = out
+    # Assuming the shape can either be of dimension 2 or 4
+    res_dict[name] = out if len(out.shape) == 2 else rearrange(out, 'b c w h -> (b w h) c')

@@ -62,7 +62,7 @@ def register_hook(mlp_inst: MLP, activations_dict: dict) -> None:
             layer.register_forward_hook(hook=partial(hook_func, activations_dict, name))
 
 
-def mlp_train(
+def train(
     train_loader: DataLoader,
     val_loader: DataLoader,
     model: MLP,
