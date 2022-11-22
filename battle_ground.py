@@ -37,25 +37,25 @@ def activation_matching() -> dict[str, torch.Tensor]:
     permuter = ActMatching(arch=[512, 512, 512, 10])
 
     # Loading individually trained models
-    mlp_model1, mlp_model2 = MLP(), MLP()
-    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    mlp_model1.to(DEVICE)
-    mlp_model1.eval()
+    vgg_model1, vgg_model2 = MLP(), MLP()
+    vgg_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
+    vgg_model1.to(DEVICE)
+    vgg_model1.eval()
 
-    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    mlp_model2.to(DEVICE)
-    mlp_model2.eval()
+    vgg_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
+    vgg_model2.to(DEVICE)
+    vgg_model2.eval()
 
     model1_dict, model2_dict = dict(), dict()
-    register_hook(mlp_inst=mlp_model1, activations_dict=model1_dict)
-    register_hook(mlp_inst=mlp_model2, activations_dict=model2_dict)
+    register_hook(mlp_inst=vgg_model1, activations_dict=model1_dict)
+    register_hook(mlp_inst=vgg_model2, activations_dict=model2_dict)
 
     # TODO: Time the below two methods and get error value
     # Method 1: Evaluating cost matrix batch wise, values are
     # added element wise
     for inp, lbl in train_loader:
-        _ = mlp_model1(inp.to(DEVICE))
-        _ = mlp_model2(inp.to(DEVICE))
+        _ = vgg_model1(inp.to(DEVICE))
+        _ = vgg_model2(inp.to(DEVICE))
 
         # The dictionaries gets erased and updated every time
         permuter.evaluate_permutation(model1_dict, model2_dict)

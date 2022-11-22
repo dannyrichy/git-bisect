@@ -50,7 +50,7 @@ LOOK_UP_WEIGHTS = {
 }
 
 
-def register_hook(mlp_inst: vgg16_bn, activations_dict: dict) -> None:
+def register_hook(mlp_inst: Type[vgg16_bn], activations_dict: dict) -> None:
     """
     Function to register hook
 
