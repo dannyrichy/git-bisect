@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, random_split
 
 
 def cifar10_loader(
-    batch_size: int, validation: bool = False
+    batch_size: int, validation: bool = False, augument: bool = False
 ) -> tuple[
     DataLoader[torchvision.datasets.CIFAR10],
     DataLoader[torchvision.datasets.CIFAR10],
@@ -27,23 +27,43 @@ def cifar10_loader(
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     )
 
+    if augument:
+        train_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    (0.5, 0.5, 0.5),
+                    (0.5, 0.5, 0.5),
+                    transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),
+                ),
+            ]
+        )
+
     train_set = torchvision.datasets.CIFAR10(
-        root="./data", train=True, download=True, transform=transform
+        root="./data", train=True, download=True, transform=train_transform
     )
 
     test_set = torchvision.datasets.CIFAR10(
         root="./data", train=False, download=True, transform=transform
     )
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(
+        test_set, batch_size=batch_size, shuffle=False, num_workers=2
+    )
 
     if validation:
         train_set, val_set = random_split(train_set, [45000, 5000])
-        val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(
+            val_set, batch_size=batch_size, shuffle=True, num_workers=2
+        )
 
-        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(
+            train_set, batch_size=batch_size, shuffle=True, num_workers=2
+        )
         return train_loader, val_loader, test_loader
     else:
-        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(
+            train_set, batch_size=batch_size, shuffle=True, num_workers=2
+        )
         return train_loader, test_loader, None
 
 
