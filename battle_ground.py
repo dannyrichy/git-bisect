@@ -1,4 +1,4 @@
-from permuter.vgg import activation_matching
+from permuter.vgg import run
 
 if __name__ == "__main__":
 
@@ -6,4 +6,4 @@ if __name__ == "__main__":
 
     # model = vgg16_bn(num_classes=10)
     # vgg_train(train_loader, val_loader, model, epochs=20, model_name="vgg")
-    activation_matching()
+    run()

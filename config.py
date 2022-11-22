@@ -4,6 +4,8 @@ import numpy
 import torch
 
 TIME_FLAG = False
+WEIGHT = "weight"
+BIAS = "bias"
 
 _STASH_PATH = Path("stash")
 _STASH_PATH.mkdir(exist_ok=True, parents=True)

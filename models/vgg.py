@@ -68,9 +68,6 @@ def register_hook(inst: VGG, activations_dict: dict) -> None:
                 )
 
 
-# loads model with random weights (DELETE)
-
-
 def train(
     train_loader: DataLoader,
     val_loader: DataLoader,

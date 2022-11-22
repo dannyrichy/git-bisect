@@ -3,8 +3,8 @@ from typing import Optional
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from einops import rearrange
 from torch.utils.data import DataLoader, random_split
-from einops import rearrange 
 
 
 def cifar10_loader(

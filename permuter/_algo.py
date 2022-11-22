@@ -1,15 +1,24 @@
 import copy
-from typing import Tuple
+from typing import Callable, Tuple
 
 import functorch
 import numpy
 import torch
+from scipy.optimize import linear_sum_assignment
 from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 
-from config import CUDA_AVAILABLE, DEVICE
-from core.utils import BIAS, WEIGHT, compute_permutation, permute_model
+from config import BIAS, CUDA_AVAILABLE, DEVICE, WEIGHT
 from helper import timer_func
+
+
+def compute_permutation(cost_matrix: numpy.ndarray) -> numpy.ndarray:
+    # solve linear sum assignment problem to get the row/column indices of optimal assignment
+    row_ind, col_ind = linear_sum_assignment(cost_matrix, maximize=True)
+    # make the permutation matrix by setting the corresponding elements to 1
+    perm = numpy.zeros(cost_matrix.shape)
+    perm[(row_ind, col_ind)] = 1
+    return perm
 
 
 class _Permuter:
@@ -207,7 +216,7 @@ class WeightMatching(_Permuter):
         :rtype: dict[str, torch.Tensor]
         """
         return self.perm
-
+    
 
 class STEstimator(_Permuter):
     def __init__(self, arch: list[int]) -> None:
@@ -225,6 +234,7 @@ class STEstimator(_Permuter):
         model1: torch.nn.Module,
         model2: torch.nn.Module,
         data_loader: DataLoader,
+        permute_model: Callable,
     ) -> Tuple[dict[str, torch.Tensor], list]:
         """
         Get permutation matrix for each layer
