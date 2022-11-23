@@ -39,7 +39,6 @@ class _Permuter:
         self.arch: Sequence[str] = arch
         self.model_width: int = len(arch)
         self.perm: PermDict = PermDict(keys=arch[:-1])
-        self.layer_look_up: dict[str, tuple[str, str, tuple[str, int]]] = dict()
 
 
 class ActMatching(_Permuter):
@@ -108,15 +107,8 @@ class WeightMatching(_Permuter):
         """
         for key, val in m_weights.items():
             layer_name, weight_type = key.split(".")
-            if weight_type == WEIGHT:
-                _layer_name, _layer_num = layer_name.split("_")
-                if layer_name != self.arch[-1]:
-                    self.perm[layer_name] = torch.eye(val.shape[0]).to(DEVICE)
-                    self.layer_look_up[key] = (
-                        "_".join([_layer_name, str(int(_layer_num) - 1)]),
-                        "_".join([_layer_name, str(int(_layer_num) + 1)]),
-                        (_layer_name, int(_layer_num)),
-                    )
+            if weight_type == WEIGHT and layer_name != self.arch[-1]:
+                self.perm[layer_name] = torch.eye(val.shape[0]).to(DEVICE)
 
     def evaluate_permutation(
         self,
@@ -141,62 +133,62 @@ class WeightMatching(_Permuter):
         while cntr < 1000 and abs_diff > 5.0:
             abs_diff = 0.0
             for key in model1_weights.keys():
-                if key in self.layer_look_up:
-                    _layer_name, _layer_num = self.layer_look_up[key][2]
-                    if self.layer_look_up[key][2] == self.arch[0]:
-                        # Ignoring the permutation in the first layer
-                        _cost_matrix = (
-                            model1_weights[key] @ model2_weights[key].T
-                            + model1_weights[
-                                self.layer_look_up[key][1] + "." + WEIGHT
-                            ].T
-                            @ self.perm[self.layer_look_up[key][1]]
-                            @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
-                        )
-                    elif self.layer_look_up[key][2] == self.arch[-1]:
-                        # Ignoring the permutation in the last layer
-                        _cost_matrix = (
-                            model1_weights[key]
-                            @ self.perm[self.layer_look_up[key][0]]
-                            @ model2_weights[key].T
-                            + model1_weights[
-                                self.layer_look_up[key][1] + "." + WEIGHT
-                            ].T
-                            @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
-                        )
-                    else:
-                        #  Every other way
-                        _cost_matrix = (
-                            model1_weights[key]
-                            @ self.perm[self.layer_look_up[key][0]]
-                            @ model2_weights[key].T
-                            + model1_weights[
-                                self.layer_look_up[key][1] + "." + WEIGHT
-                            ].T
-                            @ self.perm[self.layer_look_up[key][1]]
-                            @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
-                        )
-
-                    # Adding bias term part
-                    _cost_matrix += (
-                        model1_weights[
-                            "_".join([_layer_name, str(_layer_num)]) + "." + BIAS
-                        ].unsqueeze(1)
-                        @ model2_weights[
-                            "_".join([_layer_name, str(_layer_num)]) + "." + BIAS
-                        ]
-                        .unsqueeze(1)
-                        .T
+                layer_name, weight_type = key.split(".")
+                ix = self.arch.index(layer_name)
+                prev_ln = self.arch[ix-1] if 0 < ix else None
+                next_ln = self.arch[ix+1] if ix < self.model_width else None
+                if prev_ln is None and next_ln is not None:
+                    # Ignoring the permutation in the first layer
+                    _cost_matrix = (
+                        model1_weights[key] @ model2_weights[key].T
+                        + model1_weights[next_ln + "." + WEIGHT].T
+                        @ self.perm[next_ln]
+                        @ model2_weights[next_ln + "." + WEIGHT]
+                    )
+                elif prev_ln is not None and next_ln is None:
+                    # Ignoring the permutation in the last layer
+                    _cost_matrix = (
+                        model1_weights[key]
+                        @ self.perm[prev_ln]
+                        @ model2_weights[key].T
+                        + model1_weights[
+                            next_ln + "." + WEIGHT
+                        ].T
+                        @ model2_weights[next_ln + "." + WEIGHT]
+                    )
+                else:
+                    #  Every other way
+                    _cost_matrix = (
+                        model1_weights[key]
+                        @ self.perm[prev_ln]
+                        @ model2_weights[key].T
+                        + model1_weights[
+                            next_ln + "." + WEIGHT
+                        ].T
+                        @ self.perm[next_ln]
+                        @ model2_weights[next_ln + "." + WEIGHT]
                     )
 
-                    self.perm["_".join([_layer_name, str(_layer_num)])] = torch.Tensor(
-                        compute_permutation(
-                            _cost_matrix.detach().cpu().numpy()
-                            if CUDA_AVAILABLE
-                            else _cost_matrix.detach().numpy()
-                        )
-                    ).to(DEVICE)
-                    abs_diff += torch.sum(
+                # Adding bias term part
+                _cost_matrix += (
+                    model1_weights[
+                        layer_name + "." + BIAS
+                    ].unsqueeze(1)
+                    @ model2_weights[
+                        layer_name + "." + BIAS
+                    ]
+                    .unsqueeze(1)
+                    .T
+                )
+
+                self.perm[layer_name] = torch.Tensor(
+                    compute_permutation(
+                        _cost_matrix.detach().cpu().numpy()
+                        if CUDA_AVAILABLE
+                        else _cost_matrix.detach().numpy()
+                    )
+                ).to(DEVICE)
+                abs_diff += torch.sum(
                         torch.abs(
                             self.perm["_".join([_layer_name, str(_layer_num)])]
                             - prev_perm["_".join([_layer_name, str(_layer_num)])]
