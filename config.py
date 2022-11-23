@@ -18,8 +18,8 @@ VGG_MODEL2_PATH = _STASH_PATH.joinpath("vgg_20221122-114529.pth")
 MLP_PERM_PATH = _STASH_PATH.joinpath("mlp_perm")
 MLP_PERM_PATH.mkdir(exist_ok=True, parents=True)
 
-WEIGHT_PERM = MLP_PERM_PATH.joinpath("weight_perm.pkl")
-ACT_PERM = MLP_PERM_PATH.joinpath("act_perm.pkl")
+VGG_PERM_PATH = _STASH_PATH.joinpath("vgg_perm")
+VGG_PERM_PATH.mkdir(exist_ok=True, parents=True)
 
 CUDA_AVAILABLE = torch.cuda.is_available()
 DEVICE = torch.device("cuda" if CUDA_AVAILABLE else "cpu")

@@ -6,10 +6,17 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.models import vgg16_bn
 
-from config import BIAS, DEVICE, LAMBDA_ARRAY, VGG_MODEL1_PATH, VGG_MODEL2_PATH, WEIGHT
+from config import BIAS, DEVICE, LAMBDA_ARRAY, VGG_MODEL1_PATH, VGG_MODEL2_PATH, VGG_PERM_PATH, WEIGHT
 from models import cifar10_loader
 from models.vgg import register_hook, train
 from permuter._algo import ActMatching, STEstimator, WeightMatching
+
+WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
+ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
+
+def layer_name_splitter(value):
+    name, num, weight_type = value.split(".")
+    return name+"."+num, weight_type
 
 
 def permute_model(
@@ -33,7 +40,7 @@ def permute_model(
     model2_state_dict = model.state_dict()
 
     for key in perm_state_dict.keys():
-        layer_name, weight_type = key.split(".")
+        layer_name, weight_type = layer_name_splitter(key)
 
         if weight_type == WEIGHT and not layer_name.endswith("1"):
             _layer_name, _layer_num = layer_name.split("_")
@@ -261,8 +268,18 @@ def run():
 
     # model = vgg16_bn(num_classes=10)
     # train(train_loader, val_loader, model, epochs=20, model_name="vgg")
+<<<<<<< Updated upstream
     act_perm = activation_matching()
 
+=======
+    
+    if not ACT_PERM.is_file():
+        act_perm = activation_matching()
+        write_file(ACT_PERM, act_perm)
+    else:
+        act_perm = read_file(ACT_PERM)  
+    
+>>>>>>> Stashed changes
     vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)

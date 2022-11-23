@@ -5,7 +5,7 @@ Pipfile
 Pipfile.lock
 data
 stash/mlp_perm
-vgg_*
+stash/vgg_*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

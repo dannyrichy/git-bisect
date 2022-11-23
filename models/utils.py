@@ -35,7 +35,7 @@ def cifar10_loader(
                 transforms.Normalize(
                     (0.5, 0.5, 0.5),
                     (0.5, 0.5, 0.5),
-                    transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),
+                    transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10), #type:ignore
                 ),
             ]
         )

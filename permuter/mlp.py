@@ -5,21 +5,15 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from config import (
-    ACT_PERM,
-    BIAS,
-    DEVICE,
-    LAMBDA_ARRAY,
-    MLP_MODEL1_PATH,
-    MLP_MODEL2_PATH,
-    WEIGHT,
-    WEIGHT_PERM,
-)
+from config import (BIAS, DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH,
+                    MLP_MODEL2_PATH, MLP_PERM_PATH, WEIGHT)
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
 from models.mlp import register_hook
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 
+WEIGHT_PERM = MLP_PERM_PATH.joinpath("weight_perm.pkl")
+ACT_PERM = MLP_PERM_PATH.joinpath("act_perm.pkl")
 
 def permute_model(
     model: torch.nn.Module,
