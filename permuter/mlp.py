@@ -30,6 +30,7 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
+    # TODO: #15 Check if the last layer permuted model's state_dict is proper
     permuted_model = MLP().to(DEVICE)
 
     perm_state_dict = permuted_model.state_dict()

@@ -6,7 +6,18 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.models import vgg16_bn
 
-from config import BIAS, DEVICE, LAMBDA_ARRAY, VGG_MODEL1_PATH, VGG_MODEL2_PATH, VGG_PERM_PATH, WEIGHT
+from config import (
+    BIAS,
+    CLASSIFIER,
+    DEVICE,
+    FEATURES,
+    LAMBDA_ARRAY,
+    VGG_MODEL1_PATH,
+    VGG_MODEL2_PATH,
+    VGG_PERM_PATH,
+    WEIGHT,
+)
+from helper import read_file, write_file
 from models import cifar10_loader
 from models.vgg import register_hook, train
 from permuter._algo import ActMatching, STEstimator, WeightMatching
@@ -14,9 +25,9 @@ from permuter._algo import ActMatching, STEstimator, WeightMatching
 WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
 
-def layer_name_splitter(value):
-    name, num, weight_type = value.split(".")
-    return name+"."+num, weight_type
+
+def get_indices(perm_mat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    return torch.argmax(perm_mat, dim=1), torch.argmax(perm_mat, dim=0)
 
 
 def permute_model(
@@ -24,7 +35,7 @@ def permute_model(
     perm_dict: dict[str, torch.Tensor],
 ) -> torch.nn.Module:
     """
-    Permute the model with the dictionary
+    Permute the model with the dictionary. We are ignoring buffers, as we would re-initialise them after combining
 
     :param model: Model to be permuted
     :type model: torch.nn.Module
@@ -38,28 +49,59 @@ def permute_model(
 
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
+    _col_ind, hand_over = None, True
+    for key in perm_dict.keys():
+        row_ind, col_ind = get_indices(perm_dict[key])
+        if key.startswith(FEATURES):
+            # Key normally accounts for batch-norm
+            perm_state_dict[key + "." + WEIGHT] = model2_state_dict[key + "." + WEIGHT][
+                row_ind
+            ]
+            perm_state_dict[key + "." + BIAS] = model2_state_dict[key + "." + BIAS][
+                row_ind
+            ]
+            # Changing for conv filters
+            _key_tmp = key.split(".")
+            _key_tmp = ".".join([_key_tmp[0], str(int(_key_tmp[1]) - 1)])
+            perm_state_dict[_key_tmp + "." + BIAS] = model2_state_dict[
+                _key_tmp + "." + BIAS
+            ][row_ind]
+            perm_state_dict[_key_tmp + "." + WEIGHT] = model2_state_dict[
+                _key_tmp + "." + WEIGHT
+            ][row_ind, :, :, :]
+            if _col_ind:
+                perm_state_dict[_key_tmp + "." + WEIGHT] = perm_state_dict[
+                    _key_tmp + "." + WEIGHT
+                ][:, _col_ind, :, :]
 
-    for key in perm_state_dict.keys():
-        layer_name, weight_type = layer_name_splitter(key)
-
-        if weight_type == WEIGHT and not layer_name.endswith("1"):
-            _layer_name, _layer_num = layer_name.split("_")
-            prev_layer_name = "_".join([_layer_name, str(int(_layer_num) - 1)])
-
-            # Considers both column and row permutation if applicable else only column transformation
-            # The latter case happens for last layer
-            perm_state_dict[key] = (
-                (
-                    perm_dict[layer_name]
-                    @ model2_state_dict[key]
-                    @ perm_dict[prev_layer_name].T
-                )
-                if layer_name in perm_dict
-                else model2_state_dict[key] @ perm_dict[prev_layer_name].T
+        elif key.startswith(CLASSIFIER) and _col_ind is not None:
+            perm_state_dict[key + "." + BIAS] = (
+                model2_state_dict[key + "." + BIAS][row_ind]
+                if not key.endswith("6")
+                else model2_state_dict[key + "." + BIAS]
             )
-        elif layer_name in perm_dict:
-            perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
+            perm_state_dict[key + "." + WEIGHT] = (
+                model2_state_dict[key + "." + WEIGHT][row_ind, :]
+                if not key.endswith("6")
+                else model2_state_dict[key + "." + WEIGHT]
+            )
+            if hand_over:
+                _shape = int(
+                    model2_state_dict[key + "." + WEIGHT].shape[1] / _col_ind.shape[0]
+                )
+                _rolled_col_ind = torch.Tensor(
+                    [i * _shape + j for i in _col_ind for j in range(_shape)]
+                )
+                perm_state_dict[key + "." + WEIGHT] = perm_state_dict[
+                    key + "." + WEIGHT
+                ][:, _rolled_col_ind]
+                hand_over = False
+            else:
+                perm_state_dict[key + "." + WEIGHT] = perm_state_dict[
+                    key + "." + WEIGHT
+                ][:, _col_ind]
 
+        _col_ind = col_ind
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
@@ -268,18 +310,13 @@ def run():
 
     # model = vgg16_bn(num_classes=10)
     # train(train_loader, val_loader, model, epochs=20, model_name="vgg")
-<<<<<<< Updated upstream
-    act_perm = activation_matching()
 
-=======
-    
     if not ACT_PERM.is_file():
         act_perm = activation_matching()
         write_file(ACT_PERM, act_perm)
     else:
-        act_perm = read_file(ACT_PERM)  
-    
->>>>>>> Stashed changes
+        act_perm = read_file(ACT_PERM)
+
     vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)

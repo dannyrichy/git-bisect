@@ -6,6 +6,8 @@ import torch
 TIME_FLAG = False
 WEIGHT = "weight"
 BIAS = "bias"
+FEATURES = "features"
+CLASSIFIER = "classifier"
 
 _STASH_PATH = Path("stash")
 _STASH_PATH.mkdir(exist_ok=True, parents=True)
