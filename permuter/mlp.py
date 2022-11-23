@@ -39,7 +39,6 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
-    # TODO: #15 Check if the last layer permuted model's state_dict is proper
     permuted_model = MLP().to(DEVICE)
 
     perm_state_dict = permuted_model.state_dict()
@@ -271,7 +270,6 @@ def generate_plots(
         _perm_model.eval()
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
-        # TODO: #10 @the-nihilist-ninja Issue with weight matching algo
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
         result["WeightMatching"] = _generate_models(_model2=_perm_model)
