@@ -9,6 +9,9 @@ BIAS = "bias"
 FEATURES = "features"
 CLASSIFIER = "classifier"
 
+MLP_RESULTS_PATH = Path("Mlp_results.pkl")
+VGG_RESULTS_PATH = Path("Vgg_results.pkl")
+
 _STASH_PATH = Path("stash")
 _STASH_PATH.mkdir(exist_ok=True, parents=True)
 

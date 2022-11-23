@@ -225,7 +225,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
 
     weight_matcher = WeightMatching(arch=[512, 512, 512, 10])
     _permutation_dict = weight_matcher.evaluate_permutation(
-        model1_weights=vgg_model1.state_dict(), model2_weights=vgg_model2.state_dict()
+        m1_weights=vgg_model1.state_dict(), m2_weights=vgg_model2.state_dict()
     )
     return _permutation_dict
 

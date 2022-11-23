@@ -61,7 +61,9 @@ class ActMatching(_Permuter):
         :rtype: dict[str, numpy.ndarray]
         """
         if len(self.cost_matrix) == 0:
-            raise ValueError("Compute cost matrix first; run evaluate_permutation method!")
+            raise ValueError(
+                "Compute cost matrix first; run evaluate_permutation method!"
+            )
 
         for key in self.cost_matrix.keys():
             self.perm[key] = torch.Tensor(
@@ -84,7 +86,11 @@ class ActMatching(_Permuter):
         for key in model1.keys():
             if key != self.arch[-1]:
                 tmp = model1[key].T @ model2[key]
-                tmp = tmp.detach().cpu().numpy() if CUDA_AVAILABLE else tmp.detach().numpy()
+                tmp = (
+                    tmp.detach().cpu().numpy()
+                    if CUDA_AVAILABLE
+                    else tmp.detach().numpy()
+                )
                 self.cost_matrix[key] = self.cost_matrix.get(key, 0) + tmp
 
 
@@ -112,8 +118,8 @@ class WeightMatching(_Permuter):
 
     def evaluate_permutation(
         self,
-        model1_weights: dict[str, torch.Tensor],
-        model2_weights: dict[str, torch.Tensor],
+        m1_weights: dict[str, torch.Tensor],
+        m2_weights: dict[str, torch.Tensor],
     ) -> dict[str, torch.Tensor]:
         """
         Evaluate permutation
@@ -125,60 +131,51 @@ class WeightMatching(_Permuter):
         :return: Permutation dictionary
         :rtype: dict[str, torch.Tensor]
         """
-        cntr = 0
-        self._initialise_perm(model1_weights)
+        _ix = 0
+        self._initialise_perm(m1_weights)
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
 
-        while cntr < 1000 and abs_diff > 5.0:
+        while _ix < 1000 and abs_diff > 5.0:
             abs_diff = 0.0
-            for key in model1_weights.keys():
-                layer_name, weight_type = key.split(".")
+            for layer_name in self.perm.keys:
+                # Getting previous layer name and next layer name
                 ix = self.arch.index(layer_name)
-                prev_ln = self.arch[ix-1] if 0 < ix else None
-                next_ln = self.arch[ix+1] if ix < self.model_width else None
-                if prev_ln is None and next_ln is not None:
+
+                # Adding weights term
+                if ix == 0:
                     # Ignoring the permutation in the first layer
                     _cost_matrix = (
-                        model1_weights[key] @ model2_weights[key].T
-                        + model1_weights[next_ln + "." + WEIGHT].T
-                        @ self.perm[next_ln]
-                        @ model2_weights[next_ln + "." + WEIGHT]
+                        m1_weights[layer_name + "." + WEIGHT]
+                        @ m2_weights[layer_name + "." + WEIGHT].T
+                        + m1_weights[self.arch[ix + 1] + "." + WEIGHT].T
+                        @ self.perm[self.arch[ix + 1]]
+                        @ m2_weights[self.arch[ix + 1] + "." + WEIGHT]
                     )
-                elif prev_ln is not None and next_ln is None:
+                elif ix == self.model_width - 2:
                     # Ignoring the permutation in the last layer
                     _cost_matrix = (
-                        model1_weights[key]
-                        @ self.perm[prev_ln]
-                        @ model2_weights[key].T
-                        + model1_weights[
-                            next_ln + "." + WEIGHT
-                        ].T
-                        @ model2_weights[next_ln + "." + WEIGHT]
+                        m1_weights[layer_name + "." + WEIGHT]
+                        @ self.perm[self.arch[ix - 1]]
+                        @ m2_weights[layer_name + "." + WEIGHT].T
+                        + m1_weights[self.arch[ix + 1] + "." + WEIGHT].T
+                        @ m2_weights[self.arch[ix + 1] + "." + WEIGHT]
                     )
                 else:
                     #  Every other way
                     _cost_matrix = (
-                        model1_weights[key]
-                        @ self.perm[prev_ln]
-                        @ model2_weights[key].T
-                        + model1_weights[
-                            next_ln + "." + WEIGHT
-                        ].T
-                        @ self.perm[next_ln]
-                        @ model2_weights[next_ln + "." + WEIGHT]
+                        m1_weights[layer_name + "." + WEIGHT]
+                        @ self.perm[self.arch[ix - 1]]
+                        @ m2_weights[layer_name + "." + WEIGHT].T
+                        + m1_weights[self.arch[ix + 1] + "." + WEIGHT].T
+                        @ self.perm[self.arch[ix + 1]]
+                        @ m2_weights[self.arch[ix + 1] + "." + WEIGHT]
                     )
 
                 # Adding bias term part
                 _cost_matrix += (
-                    model1_weights[
-                        layer_name + "." + BIAS
-                    ].unsqueeze(1)
-                    @ model2_weights[
-                        layer_name + "." + BIAS
-                    ]
-                    .unsqueeze(1)
-                    .T
+                    m1_weights[layer_name + "." + BIAS].unsqueeze(1)
+                    @ m2_weights[layer_name + "." + BIAS].unsqueeze(1).T
                 )
 
                 self.perm[layer_name] = torch.Tensor(
@@ -189,12 +186,9 @@ class WeightMatching(_Permuter):
                     )
                 ).to(DEVICE)
                 abs_diff += torch.sum(
-                        torch.abs(
-                            self.perm["_".join([_layer_name, str(_layer_num)])]
-                            - prev_perm["_".join([_layer_name, str(_layer_num)])]
-                        )
-                    ).item()
-            cntr += 1
+                    torch.abs(self.perm[layer_name] - prev_perm[layer_name])
+                ).item()
+            _ix += 1
             abs_diff = abs_diff
             prev_perm = copy.deepcopy(self.perm)
 
@@ -250,10 +244,12 @@ class STEstimator(_Permuter):
         for _ in range(1):
             for inp, out in data_loader:
                 # Finding the permutation
-                self.perm = PermDict.from_dict(self.weight_matching.evaluate_permutation(
-                    model1_weights=model_hat.state_dict(),
-                    model2_weights=model2.state_dict(),
-                ))
+                self.perm = PermDict.from_dict(
+                    self.weight_matching.evaluate_permutation(
+                        m1_weights=model_hat.state_dict(),
+                        m2_weights=model2.state_dict(),
+                    )
+                )
 
                 # Finding the projected model
                 projected_model = permute_model(model=model2, perm_dict=self.perm)

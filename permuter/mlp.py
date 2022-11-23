@@ -5,16 +5,24 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from config import (BIAS, DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH,
-                    MLP_MODEL2_PATH, MLP_PERM_PATH, WEIGHT)
+from config import (
+    DEVICE,
+    LAMBDA_ARRAY,
+    MLP_MODEL1_PATH,
+    MLP_MODEL2_PATH,
+    MLP_PERM_PATH,
+    MLP_RESULTS_PATH,
+    WEIGHT,
+)
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
-from models.mlp import register_hook, LAYER_NAMES
+from models.mlp import LAYER_NAMES, register_hook
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 
 WEIGHT_PERM = MLP_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = MLP_PERM_PATH.joinpath("act_perm.pkl")
 STE_PERM = MLP_PERM_PATH.joinpath("ste_perm.pkl")
+
 
 def permute_model(
     model: torch.nn.Module,
@@ -41,7 +49,7 @@ def permute_model(
         layer_name, weight_type = key.split(".")
 
         if weight_type == WEIGHT and layer_name != LAYER_NAMES[0]:
-            prev_layer_name = LAYER_NAMES[LAYER_NAMES.index(layer_name)-1]
+            prev_layer_name = LAYER_NAMES[LAYER_NAMES.index(layer_name) - 1]
 
             # Considers both column and row permutation if applicable else only column transformation
             # The latter case happens for last layer
@@ -178,7 +186,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
 
     weight_matcher = WeightMatching(arch=LAYER_NAMES)
     _permutation_dict = weight_matcher.evaluate_permutation(
-        model1_weights=mlp_model1.state_dict(), model2_weights=mlp_model2.state_dict()
+        m1_weights=mlp_model1.state_dict(), m2_weights=mlp_model2.state_dict()
     )
     return _permutation_dict
 
@@ -200,7 +208,6 @@ def ste_matching() -> dict[str, torch.Tensor]:
         permute_model=permute_model,
     )
     return perm
-    
 
 
 def generate_plots(
@@ -290,7 +297,7 @@ def run():
         write_file(ACT_PERM, act_perm)
     else:
         act_perm = read_file(ACT_PERM)
-        
+
     if not STE_PERM.is_file():
         ste_perm = ste_matching()
         write_file(STE_PERM, ste_perm)
@@ -307,7 +314,13 @@ def run():
     mlp_model2.eval()
 
     results_dict = generate_plots(
-        model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm, ste_perm=ste_perm)
+        model1=mlp_model1,
+        model2=mlp_model2,
+        act_perm=act_perm,
+        weight_perm=weight_perm,
+        ste_perm=ste_perm,
+    )
 
     # Creating a plot
     plt_dict(results_dict)
+    write_file(MLP_RESULTS_PATH, results_dict)
