@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, Tuple
+from typing import Callable, Sequence, Tuple
 
 import functorch
 import numpy
@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 
 from config import BIAS, CUDA_AVAILABLE, DEVICE, WEIGHT
 from helper import timer_func
+from permuter.common import PermDict
 
 
 def compute_permutation(cost_matrix: numpy.ndarray) -> numpy.ndarray:
@@ -26,7 +27,7 @@ class _Permuter:
     Parent class for permutation method
     """
 
-    def __init__(self, arch: list[int]) -> None:
+    def __init__(self, arch: Sequence[str]) -> None:
         """
         To store the state of the architecture and common methods
 
@@ -35,14 +36,14 @@ class _Permuter:
         :param model_width: # of layers
         :type model_width: int
         """
-        self.arch: list[int] = arch
+        self.arch: Sequence[str] = arch
         self.model_width: int = len(arch)
-        self.perm: dict[str, torch.Tensor] = dict()
+        self.perm: PermDict = PermDict(keys=arch[:-1])
         self.layer_look_up: dict[str, tuple[str, str, tuple[str, int]]] = dict()
 
 
 class ActMatching(_Permuter):
-    def __init__(self, arch: list[int]) -> None:
+    def __init__(self, arch: Sequence[str]) -> None:
         """
         Activation method
 
@@ -60,16 +61,15 @@ class ActMatching(_Permuter):
         :return: Dictionary of permutation
         :rtype: dict[str, numpy.ndarray]
         """
-        # TODO: Compute error of the procrustes method
         if len(self.cost_matrix) == 0:
-            raise ValueError("Compute cost matrix first")
+            raise ValueError("Compute cost matrix first; run evaluate_permutation method!")
 
         for key in self.cost_matrix.keys():
             self.perm[key] = torch.Tensor(
                 compute_permutation(self.cost_matrix[key])
             ).to(DEVICE)
 
-        return self.perm
+        return self.perm()
 
     def evaluate_permutation(
         self, model1: dict[str, torch.Tensor], model2: dict[str, torch.Tensor]
@@ -83,13 +83,14 @@ class ActMatching(_Permuter):
         :type model2: dict[str, torch.Tensor]
         """
         for key in model1.keys():
-            tmp = model1[key].T @ model2[key]
-            tmp = tmp.detach().cpu().numpy() if CUDA_AVAILABLE else tmp.detach().numpy()
-            self.cost_matrix[key] = self.cost_matrix.get(key, 0) + tmp
+            if key != self.arch[-1]:
+                tmp = model1[key].T @ model2[key]
+                tmp = tmp.detach().cpu().numpy() if CUDA_AVAILABLE else tmp.detach().numpy()
+                self.cost_matrix[key] = self.cost_matrix.get(key, 0) + tmp
 
 
 class WeightMatching(_Permuter):
-    def __init__(self, arch: list[int]) -> None:
+    def __init__(self, arch: Sequence[str]) -> None:
         """
         _summary_
 
@@ -109,7 +110,7 @@ class WeightMatching(_Permuter):
             layer_name, weight_type = key.split(".")
             if weight_type == WEIGHT:
                 _layer_name, _layer_num = layer_name.split("_")
-                if int(_layer_num) != self.model_width:
+                if layer_name != self.arch[-1]:
                     self.perm[layer_name] = torch.eye(val.shape[0]).to(DEVICE)
                     self.layer_look_up[key] = (
                         "_".join([_layer_name, str(int(_layer_num) - 1)]),
@@ -132,7 +133,6 @@ class WeightMatching(_Permuter):
         :return: Permutation dictionary
         :rtype: dict[str, torch.Tensor]
         """
-        # TODO: Check if model is in DEVICE
         cntr = 0
         self._initialise_perm(model1_weights)
         prev_perm = copy.deepcopy(self.perm)
@@ -143,7 +143,7 @@ class WeightMatching(_Permuter):
             for key in model1_weights.keys():
                 if key in self.layer_look_up:
                     _layer_name, _layer_num = self.layer_look_up[key][2]
-                    if _layer_num == 1:
+                    if self.layer_look_up[key][2] == self.arch[0]:
                         # Ignoring the permutation in the first layer
                         _cost_matrix = (
                             model1_weights[key] @ model2_weights[key].T
@@ -153,7 +153,7 @@ class WeightMatching(_Permuter):
                             @ self.perm[self.layer_look_up[key][1]]
                             @ model2_weights[self.layer_look_up[key][1] + "." + WEIGHT]
                         )
-                    elif _layer_num == self.model_width - 1:
+                    elif self.layer_look_up[key][2] == self.arch[-1]:
                         # Ignoring the permutation in the last layer
                         _cost_matrix = (
                             model1_weights[key]
@@ -206,7 +206,7 @@ class WeightMatching(_Permuter):
             abs_diff = abs_diff
             prev_perm = copy.deepcopy(self.perm)
 
-        return self.perm
+        return self.perm()
 
     def get_permutation(self) -> dict[str, torch.Tensor]:
         """
@@ -215,11 +215,11 @@ class WeightMatching(_Permuter):
         :return: Dictionary of permutation matrices
         :rtype: dict[str, torch.Tensor]
         """
-        return self.perm
+        return self.perm()
 
 
 class STEstimator(_Permuter):
-    def __init__(self, arch: list[int]) -> None:
+    def __init__(self, arch: Sequence[str]) -> None:
         """
         Straight Through Estimator
 
@@ -258,10 +258,10 @@ class STEstimator(_Permuter):
         for _ in range(1):
             for inp, out in data_loader:
                 # Finding the permutation
-                self.perm = self.weight_matching.evaluate_permutation(
+                self.perm = PermDict.from_dict(self.weight_matching.evaluate_permutation(
                     model1_weights=model_hat.state_dict(),
                     model2_weights=model2.state_dict(),
-                )
+                ))
 
                 # Finding the projected model
                 projected_model = permute_model(model=model2, perm_dict=self.perm)
@@ -294,4 +294,4 @@ class STEstimator(_Permuter):
                     {name: param for name, param in zip(func.param_names, params_hat)}
                 )
 
-        return self.perm, loss_arr
+        return self.perm(), loss_arr

@@ -9,11 +9,12 @@ from config import (BIAS, DEVICE, LAMBDA_ARRAY, MLP_MODEL1_PATH,
                     MLP_MODEL2_PATH, MLP_PERM_PATH, WEIGHT)
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
-from models.mlp import register_hook
+from models.mlp import register_hook, LAYER_NAMES
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 
 WEIGHT_PERM = MLP_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = MLP_PERM_PATH.joinpath("act_perm.pkl")
+STE_PERM = MLP_PERM_PATH.joinpath("ste_perm.pkl")
 
 def permute_model(
     model: torch.nn.Module,
@@ -126,9 +127,9 @@ def activation_matching() -> dict[str, torch.Tensor]:
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
-    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
+    train_loader, test_loader, _ = cifar10_loader(batch_size=512)
     # TODO: Create checker methods using arch and model_width params
-    permuter = ActMatching(arch=[512, 512, 512, 10])
+    permuter = ActMatching(arch=LAYER_NAMES)
 
     # Loading individually trained models
     mlp_model1, mlp_model2 = MLP(), MLP()
@@ -176,11 +177,31 @@ def weight_matching() -> dict[str, torch.Tensor]:
     mlp_model2.to(DEVICE)
     mlp_model2.eval()
 
-    weight_matcher = WeightMatching(arch=[512, 512, 512, 10])
+    weight_matcher = WeightMatching(arch=LAYER_NAMES)
     _permutation_dict = weight_matcher.evaluate_permutation(
         model1_weights=mlp_model1.state_dict(), model2_weights=mlp_model2.state_dict()
     )
     return _permutation_dict
+
+
+def ste_matching() -> dict[str, torch.Tensor]:
+    train_loader, test_loader, _ = cifar10_loader(batch_size=256)
+    mlp_model1, mlp_model2 = MLP(), MLP()
+    mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
+    mlp_model1.to(DEVICE)
+
+    mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
+    mlp_model2.to(DEVICE)
+
+    ste = STEstimator(arch=LAYER_NAMES)
+    perm, losses = ste.evaluate_permutation(
+        model1=mlp_model1,
+        model2=mlp_model2,
+        data_loader=train_loader,
+        permute_model=permute_model,
+    )
+    return perm
+    
 
 
 def generate_plots(
@@ -259,49 +280,35 @@ def generate_plots(
 
 def run():
 
-    # if not WEIGHT_PERM.is_file():
-    #     weight_perm = weight_matching()
-    #     write_file(WEIGHT_PERM, weight_perm)
-    # else:
-    #     weight_perm = read_file(WEIGHT_PERM)
+    if not WEIGHT_PERM.is_file():
+        weight_perm = weight_matching()
+        write_file(WEIGHT_PERM, weight_perm)
+    else:
+        weight_perm = read_file(WEIGHT_PERM)
 
-    # if not ACT_PERM.is_file():
-    #     act_perm = activation_matching()
-    #     write_file(ACT_PERM, act_perm)
-    # else:
-    #     act_perm = read_file(ACT_PERM)
-
-    # mlp_model1, mlp_model2 = MLP(), MLP()
-    # mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
-    # mlp_model1.to(DEVICE)
-    # mlp_model1.eval()
-
-    # mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
-    # mlp_model2.to(DEVICE)
-    # mlp_model2.eval()
-
-    # results_dict = generate_plots(
-    #     model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm
-    # )
-
-    train_loader, test_loader, _ = cifar10_loader(batch_size=8)
+    if not ACT_PERM.is_file():
+        act_perm = activation_matching()
+        write_file(ACT_PERM, act_perm)
+    else:
+        act_perm = read_file(ACT_PERM)
+        
+    if not STE_PERM.is_file():
+        ste_perm = ste_matching()
+        write_file(STE_PERM, ste_perm)
+    else:
+        ste_perm = read_file(STE_PERM)
 
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)
+    mlp_model1.eval()
 
     mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
     mlp_model2.to(DEVICE)
+    mlp_model2.eval()
 
-    ste = STEstimator(arch=[512, 512, 512, 10])
-    perm, losses = ste.evaluate_permutation(
-        model1=mlp_model1,
-        model2=mlp_model2,
-        data_loader=train_loader,
-        permute_model=permute_model,
-    )
-
-    results_dict = generate_plots(model1=mlp_model1, model2=mlp_model2, ste_perm=perm)
+    results_dict = generate_plots(
+        model1=mlp_model1, model2=mlp_model2, act_perm=act_perm, weight_perm=weight_perm, ste_perm=ste_perm)
 
     # Creating a plot
     plt_dict(results_dict)
