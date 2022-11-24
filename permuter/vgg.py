@@ -18,7 +18,7 @@ from config import (
 )
 from helper import plt_dict, read_file, write_file
 from models import cifar10_loader
-from models.vgg import LOOK_UP_LAYER, register_hook, train
+from models.vgg import INDEX_LAYER, LOOK_UP_LAYER, register_hook, train
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 from permuter.common import combine_models, get_losses
 
@@ -49,30 +49,15 @@ def permute_model(
 
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
-    _prev_perm, hand_over = None, True
+    hand_over = None, True
     for key in perm_dict.keys():
         if key.startswith(FEATURES):
             # Key normally accounts for batch-norm
-            # perm_state_dict[key + "." + WEIGHT] = model2_state_dict[key + "." + WEIGHT][
-            #     row_ind
-            # ]
-            # perm_state_dict[key + "." + BIAS] = model2_state_dict[key + "." + BIAS][
-            #     row_ind
-            # ]
-            # perm_state_dict[_key_tmp + "." + BIAS] = model2_state_dict[
-            #     _key_tmp + "." + BIAS
-            # ][row_ind]
-            # perm_state_dict[_key_tmp + "." + WEIGHT] = model2_state_dict[
-            #     _key_tmp + "." + WEIGHT
-            # ][row_ind, :, :, :]
-
 
             # Changing for conv filters
-            _prev_key = key.split(".")
-            _prev_key = ".".join([_prev_key[0], str(int(_prev_key[1]) - 1)])
-
+            _prev_key, _next_key = INDEX_LAYER[key]
             _iter = [i + "." + j for i in (key, _prev_key) for j in (WEIGHT, BIAS)]
-            
+
             # Forward permutation
             for _key in _iter:
                 perm_state_dict[_key] = torch.einsum(
@@ -81,72 +66,41 @@ def permute_model(
                     model2_state_dict[_key],
                 )
 
-            if _prev_perm is not None:
-                # perm_state_dict[_key_tmp + "." + WEIGHT] = perm_state_dict[
-                #     _key_tmp + "." + WEIGHT
-                # ][:, _col_ind, :, :]
-                perm_state_dict[_prev_key + "." + WEIGHT] = torch.einsum(
+            # Reverse permutation for the next layer
+            if not _next_key.startswith(CLASSIFIER):
+                perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
                     "jk..., ik -> ji...",
                     model2_state_dict[_prev_key + "." + WEIGHT],
-                    _prev_perm,
-                )
-
-        elif key.startswith(CLASSIFIER) and _prev_perm is not None:
-            # perm_state_dict[key + "." + BIAS] = (
-            #     model2_state_dict[key + "." + BIAS][row_ind]
-            #     if not key.endswith("6")
-            #     else model2_state_dict[key + "." + BIAS]
-            # )
-            perm_state_dict[key + "." + BIAS] = (
-                torch.einsum(
-                    "ij, j... -> i...",
                     perm_dict[key],
-                    model2_state_dict[key + "." + BIAS],
                 )
-                if not key.endswith("6")
-                else model2_state_dict[key + "." + BIAS]
-            )
-
-            # perm_state_dict[key + "." + WEIGHT] = (
-            #     model2_state_dict[key + "." + WEIGHT][row_ind, :]
-            #     if not key.endswith("6")
-            #     else model2_state_dict[key + "." + WEIGHT]
-            # )
-            perm_state_dict[key + "." + WEIGHT] = (
-                torch.einsum(
-                    "ij, j... -> i...",
-                    perm_dict[key],
-                    model2_state_dict[key + "." + WEIGHT],
-                )
-                if not key.endswith("6")
-                else model2_state_dict[key + "." + WEIGHT]
-            )
-
-            if hand_over:
+            else:
                 _shape = int(
-                    model2_state_dict[key + "." + WEIGHT].shape[1]
-                    / _prev_perm.size(dim=0)
+                    model2_state_dict[_next_key + "." + WEIGHT].shape[1]
+                    / perm_dict[key].size(dim=0)
                 )
-                # _rolled_col_ind = torch.Tensor(
-                #     [i * _shape + j for i in _col_ind for j in range(_shape)]
-                # )
-                # perm_state_dict[key + "." + WEIGHT] = perm_state_dict[
-                #     key + "." + WEIGHT
-                # ][:, _rolled_col_ind]
                 perm_state_dict[key + "." + WEIGHT] = torch.einsum(
                     "jk..., ki -> ji...",
                     model2_state_dict[key + "." + WEIGHT],
-                    torch.kron(_prev_perm.T.contiguous(), torch.eye(_shape).to(DEVICE)),
-                )
-                hand_over = False
-            else:
-                perm_state_dict[key + "." + WEIGHT] = torch.einsum(
-                    "jk..., ik -> ji...",
-                    model2_state_dict[key + "." + WEIGHT],
-                    _prev_perm,
+                    torch.kron(
+                        perm_dict[key].T.contiguous(), torch.eye(_shape).to(DEVICE)
+                    ),
                 )
 
-        _prev_perm = perm_dict[key]
+        elif key.startswith(CLASSIFIER):
+            _next_key = INDEX_LAYER[key]
+            _iter = [i + "." + j for i in (key) for j in (WEIGHT, BIAS)]
+            for _key in _iter:
+                perm_state_dict[_key] = torch.einsum(
+                    "ij, j... -> i...",
+                    perm_dict[key],
+                    model2_state_dict[_key],
+                )
+
+            perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
+                "jk..., ik -> ji...",
+                model2_state_dict[_next_key + "." + WEIGHT],
+                perm_dict[key],
+            )
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
