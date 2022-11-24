@@ -242,7 +242,8 @@ class STEstimator(_Permuter):
         model_hat = copy.deepcopy(model1)
         loss_arr = list()
 
-        for _ in range(1):
+        for _ in range(5):
+            print(f"Epoch {_} running!")
             for inp, out in data_loader:
                 # Finding the permutation
                 self.perm = PermDict.from_dict(
@@ -253,7 +254,7 @@ class STEstimator(_Permuter):
                 )
 
                 # Finding the projected model
-                projected_model = permute_model(model=model2, perm_dict=self.perm)
+                projected_model = permute_model(model=model2, perm_dict=self.perm())
 
                 func, params_1 = functorch.make_functional(model1)
                 _, params_hat = functorch.make_functional(model_hat)

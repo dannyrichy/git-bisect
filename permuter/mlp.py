@@ -74,6 +74,7 @@ def activation_matching() -> dict[str, torch.Tensor]:
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
+    print("Running Activation matching!")
     train_loader, test_loader, _ = cifar10_loader(batch_size=512)
     # TODO: Create checker methods using arch and model_width params
     permuter = ActMatching(arch=LAYER_NAMES)
@@ -115,6 +116,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
+    print("Running Weight Matching!")
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)
@@ -132,6 +134,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
 
 
 def ste_matching() -> dict[str, torch.Tensor]:
+    print("Running STEstimator")
     train_loader, test_loader, _ = cifar10_loader(batch_size=256)
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
