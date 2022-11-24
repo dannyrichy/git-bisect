@@ -16,7 +16,7 @@ from config import (
     VGG_PERM_PATH,
     WEIGHT,
 )
-from helper import read_file, write_file
+from helper import plt_dict, read_file, write_file
 from models import cifar10_loader
 from models.vgg import LOOK_UP_LAYER, register_hook, train
 from permuter._algo import ActMatching, STEstimator, WeightMatching
@@ -145,9 +145,9 @@ def permute_model(
                 #     key + "." + WEIGHT
                 # ][:, _rolled_col_ind]
                 perm_state_dict[key + "." + WEIGHT] = torch.einsum(
-                    "jk..., ik -> ji...",
+                    "jk..., ki -> ji...",
                     model2_state_dict[key + "." + WEIGHT],
-                    _prev_perm.unsqueeze(2).repeat(1, _shape, 1).reshape(_prev_perm.size(dim=0), -1),
+                    torch.kron(_prev_perm.T.contiguous(),torch.eye(_shape).to(DEVICE)),
                 )
                 hand_over = False
             else:
@@ -325,3 +325,4 @@ def run():
     results_dict = generate_plots(
         model1=vgg_model1, model2=vgg_model2, act_perm=act_perm
     )
+    plt_dict(results_dict)
