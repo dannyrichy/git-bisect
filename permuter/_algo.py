@@ -13,13 +13,21 @@ from helper import timer_func
 from permuter.common import PermDict
 
 
-def compute_permutation(cost_matrix: numpy.ndarray) -> numpy.ndarray:
+def compute_permutation(cost_matrix: numpy.ndarray) -> torch.Tensor:
+    """
+    Computes the permutation matrix using Hungarian method
+
+    :param cost_matrix: _description_
+    :type cost_matrix: numpy.ndarray
+    :return: _description_
+    :rtype: torch.Tensor
+    """
     # solve linear sum assignment problem to get the row/column indices of optimal assignment
     row_ind, col_ind = linear_sum_assignment(cost_matrix, maximize=True)
     # make the permutation matrix by setting the corresponding elements to 1
     perm = numpy.zeros(cost_matrix.shape)
     perm[(row_ind, col_ind)] = 1
-    return perm
+    return torch.Tensor(perm).to(DEVICE)
 
 
 class _Permuter:
@@ -52,7 +60,7 @@ class ActMatching(_Permuter):
         super().__init__(arch)
         self.cost_matrix: dict[str, numpy.ndarray] = dict()
 
-    @timer_func("Activation method")
+    @timer_func("Method 1: Computing permutation")
     def get_permutation(self) -> dict[str, torch.Tensor]:
         """
         Get's layer wise permutation matrix
@@ -66,12 +74,11 @@ class ActMatching(_Permuter):
             )
 
         for key in self.cost_matrix.keys():
-            self.perm[key] = torch.Tensor(
-                compute_permutation(self.cost_matrix[key])
-            ).to(DEVICE)
+            self.perm[key] = compute_permutation(self.cost_matrix[key])
 
         return self.perm()
 
+    @timer_func("Method 1: Computing cost")
     def evaluate_permutation(
         self, model1: dict[str, torch.Tensor], model2: dict[str, torch.Tensor]
     ) -> None:
@@ -85,7 +92,6 @@ class ActMatching(_Permuter):
         """
         for key in model1.keys():
             if key != self.arch[-1]:
-                # tmp = model1[key].T @ model2[key]
                 tmp = torch.einsum("ij..., ik... -> jk", model1[key], model2[key])
                 tmp = (
                     tmp.detach().cpu().numpy()
@@ -179,13 +185,12 @@ class WeightMatching(_Permuter):
                     @ m2_weights[layer_name + "." + BIAS].unsqueeze(1).T
                 )
 
-                self.perm[layer_name] = torch.Tensor(
-                    compute_permutation(
-                        _cost_matrix.detach().cpu().numpy()
-                        if CUDA_AVAILABLE
-                        else _cost_matrix.detach().numpy()
-                    )
-                ).to(DEVICE)
+                self.perm[layer_name] = compute_permutation(
+                    _cost_matrix.detach().cpu().numpy()
+                    if CUDA_AVAILABLE
+                    else _cost_matrix.detach().numpy()
+                )
+
                 abs_diff += torch.sum(
                     torch.abs(self.perm[layer_name] - prev_perm[layer_name])
                 ).item()
@@ -206,12 +211,18 @@ class WeightMatching(_Permuter):
 
 
 class STEstimator(_Permuter):
+    """
+    Straight Through Estimator
+
+    :param _Permuter: Base Class
+    :type _Permuter: _Permuter
+    """
     def __init__(self, arch: Sequence[str]) -> None:
         """
         Straight Through Estimator
 
         :param arch: Architecture
-        :type arch: list[int]
+        :type arch: Sequence[str]
         """
         super().__init__(arch)
         self.weight_matching = WeightMatching(arch=arch)
@@ -221,7 +232,9 @@ class STEstimator(_Permuter):
         model1: torch.nn.Module,
         model2: torch.nn.Module,
         data_loader: DataLoader,
-        permute_model: Callable,
+        permute_model: Callable[
+            [torch.nn.Module, dict[str, torch.Tensor]], torch.nn.Module
+        ],
     ) -> Tuple[dict[str, torch.Tensor], list]:
         """
         Get permutation matrix for each layer
@@ -232,11 +245,11 @@ class STEstimator(_Permuter):
         :type model2: torch.nn.Module
         :param data_loader: _description_
         :type data_loader: DataLoader
+        :param permute_model: _description_
+        :type permute_model: Callable[ [torch.nn.Module, dict[str, torch.Tensor]], torch.nn.Module ]
         :return: _description_
-        :rtype: dict[str, torch.Tensor]
+        :rtype: Tuple[dict[str, torch.Tensor], list]
         """
-
-        # TODO: Check {->} caution: Ensure models are not in eval mode
 
         # Initialise model_hat
         model_hat = copy.deepcopy(model1)
@@ -254,7 +267,7 @@ class STEstimator(_Permuter):
                 )
 
                 # Finding the projected model
-                projected_model = permute_model(model=model2, perm_dict=self.perm())
+                projected_model = permute_model(model2, self.perm())
 
                 func, params_1 = functorch.make_functional(model1)
                 _, params_hat = functorch.make_functional(model_hat)

@@ -56,49 +56,38 @@ def permute_model(
             # perm_state_dict[key + "." + WEIGHT] = model2_state_dict[key + "." + WEIGHT][
             #     row_ind
             # ]
-            perm_state_dict[key + "." + WEIGHT] = torch.einsum(
-                "ij, j... -> i...",
-                perm_dict[key],
-                model2_state_dict[key + "." + WEIGHT],
-            )
-
             # perm_state_dict[key + "." + BIAS] = model2_state_dict[key + "." + BIAS][
             #     row_ind
             # ]
-            perm_state_dict[key + "." + BIAS] = torch.einsum(
-                "ij, j... -> i...", perm_dict[key], model2_state_dict[key + "." + BIAS]
-            )
-
-            # Changing for conv filters
-            _key_tmp = key.split(".")
-            _key_tmp = ".".join([_key_tmp[0], str(int(_key_tmp[1]) - 1)])
             # perm_state_dict[_key_tmp + "." + BIAS] = model2_state_dict[
             #     _key_tmp + "." + BIAS
             # ][row_ind]
-
-            perm_state_dict[_key_tmp + "." + BIAS] = torch.einsum(
-                "ij, j... -> i...",
-                perm_dict[key],
-                model2_state_dict[_key_tmp + "." + BIAS],
-            )
-
             # perm_state_dict[_key_tmp + "." + WEIGHT] = model2_state_dict[
             #     _key_tmp + "." + WEIGHT
             # ][row_ind, :, :, :]
 
-            perm_state_dict[_key_tmp + "." + WEIGHT] = torch.einsum(
-                "ij, j... -> i...",
-                perm_dict[key],
-                model2_state_dict[_key_tmp + "." + WEIGHT],
-            )
+
+            # Changing for conv filters
+            _prev_key = key.split(".")
+            _prev_key = ".".join([_prev_key[0], str(int(_prev_key[1]) - 1)])
+
+            _iter = [i + "." + j for i in (key, _prev_key) for j in (WEIGHT, BIAS)]
+            
+            # Forward permutation
+            for _key in _iter:
+                perm_state_dict[_key] = torch.einsum(
+                    "ij, j... -> i...",
+                    perm_dict[key],
+                    model2_state_dict[_key],
+                )
 
             if _prev_perm is not None:
                 # perm_state_dict[_key_tmp + "." + WEIGHT] = perm_state_dict[
                 #     _key_tmp + "." + WEIGHT
                 # ][:, _col_ind, :, :]
-                perm_state_dict[_key_tmp + "." + WEIGHT] = torch.einsum(
+                perm_state_dict[_prev_key + "." + WEIGHT] = torch.einsum(
                     "jk..., ik -> ji...",
-                    model2_state_dict[_key_tmp + "." + WEIGHT],
+                    model2_state_dict[_prev_key + "." + WEIGHT],
                     _prev_perm,
                 )
 
@@ -147,7 +136,7 @@ def permute_model(
                 perm_state_dict[key + "." + WEIGHT] = torch.einsum(
                     "jk..., ki -> ji...",
                     model2_state_dict[key + "." + WEIGHT],
-                    torch.kron(_prev_perm.T.contiguous(),torch.eye(_shape).to(DEVICE)),
+                    torch.kron(_prev_perm.T.contiguous(), torch.eye(_shape).to(DEVICE)),
                 )
                 hand_over = False
             else:
