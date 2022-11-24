@@ -19,7 +19,7 @@ from config import (
 )
 from helper import read_file, write_file
 from models import cifar10_loader
-from models.vgg import register_hook, train
+from models.vgg import register_hook, train, LOOK_UP_LAYER
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 
 WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
@@ -173,7 +173,7 @@ def activation_matching() -> dict[str, torch.Tensor]:
     """
     train_loader, test_loader, _ = cifar10_loader(batch_size=256)
     # TODO: Create checker methods using arch and model_width params
-    permuter = ActMatching(arch=[512, 512, 512, 10])
+    permuter = ActMatching(arch=LOOK_UP_LAYER)
 
     # Loading individually trained models
     vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
@@ -223,7 +223,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
     vgg_model2.to(DEVICE)
     vgg_model2.eval()
 
-    weight_matcher = WeightMatching(arch=[512, 512, 512, 10])
+    weight_matcher = WeightMatching(arch=LOOK_UP_LAYER)
     _permutation_dict = weight_matcher.evaluate_permutation(
         m1_weights=vgg_model1.state_dict(), m2_weights=vgg_model2.state_dict()
     )
@@ -291,7 +291,6 @@ def generate_plots(
         _perm_model.eval()
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
-        # TODO: #10 @the-nihilist-ninja Issue with weight matching algo
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
         result["WeightMatching"] = _generate_models(_model2=_perm_model)

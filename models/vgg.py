@@ -11,7 +11,7 @@ from torchvision.models import VGG
 from config import DEVICE
 from models.utils import hook_func
 
-LOOK_UP_LAYER = {
+LOOK_UP_LAYER = [
     "features.1",
     "features.4",
     "features.8",
@@ -28,7 +28,7 @@ LOOK_UP_LAYER = {
     "classifier.0",
     "classifier.3",
     "classifier.6",
-}
+]
 
 LOOK_UP_WEIGHTS = {
     "features.0.weight",
