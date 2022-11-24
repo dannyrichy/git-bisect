@@ -49,59 +49,116 @@ def permute_model(
 
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
-    _col_ind, hand_over = None, True
+    _prev_perm, hand_over = None, True
     for key in perm_dict.keys():
-        row_ind, col_ind = get_indices(perm_dict[key])
         if key.startswith(FEATURES):
             # Key normally accounts for batch-norm
-            perm_state_dict[key + "." + WEIGHT] = model2_state_dict[key + "." + WEIGHT][
-                row_ind
-            ]
-            perm_state_dict[key + "." + BIAS] = model2_state_dict[key + "." + BIAS][
-                row_ind
-            ]
+            # perm_state_dict[key + "." + WEIGHT] = model2_state_dict[key + "." + WEIGHT][
+            #     row_ind
+            # ]
+            perm_state_dict[key + "." + WEIGHT] = torch.einsum(
+                "ij, j... -> i...",
+                perm_dict[key],
+                model2_state_dict[key + "." + WEIGHT],
+            )
+
+            # perm_state_dict[key + "." + BIAS] = model2_state_dict[key + "." + BIAS][
+            #     row_ind
+            # ]
+            perm_state_dict[key + "." + BIAS] = torch.einsum(
+                "ij, j... -> i...", perm_dict[key], model2_state_dict[key + "." + BIAS]
+            )
+
             # Changing for conv filters
             _key_tmp = key.split(".")
             _key_tmp = ".".join([_key_tmp[0], str(int(_key_tmp[1]) - 1)])
-            perm_state_dict[_key_tmp + "." + BIAS] = model2_state_dict[
-                _key_tmp + "." + BIAS
-            ][row_ind]
-            perm_state_dict[_key_tmp + "." + WEIGHT] = model2_state_dict[
-                _key_tmp + "." + WEIGHT
-            ][row_ind, :, :, :]
-            if _col_ind:
-                perm_state_dict[_key_tmp + "." + WEIGHT] = perm_state_dict[
-                    _key_tmp + "." + WEIGHT
-                ][:, _col_ind, :, :]
+            # perm_state_dict[_key_tmp + "." + BIAS] = model2_state_dict[
+            #     _key_tmp + "." + BIAS
+            # ][row_ind]
 
-        elif key.startswith(CLASSIFIER) and _col_ind is not None:
+            perm_state_dict[_key_tmp + "." + BIAS] = torch.einsum(
+                "ij, j... -> i...",
+                perm_dict[_key_tmp],
+                model2_state_dict[_key_tmp + "." + BIAS],
+            )
+
+            # perm_state_dict[_key_tmp + "." + WEIGHT] = model2_state_dict[
+            #     _key_tmp + "." + WEIGHT
+            # ][row_ind, :, :, :]
+
+            perm_state_dict[_key_tmp + "." + WEIGHT] = torch.einsum(
+                "ij, j... -> i...",
+                perm_dict[_key_tmp],
+                model2_state_dict[_key_tmp + "." + WEIGHT],
+            )
+
+            if _prev_perm:
+                # perm_state_dict[_key_tmp + "." + WEIGHT] = perm_state_dict[
+                #     _key_tmp + "." + WEIGHT
+                # ][:, _col_ind, :, :]
+                perm_state_dict[_key_tmp + "." + WEIGHT] = torch.einsum(
+                    "jk..., ik -> ji...",
+                    model2_state_dict[_key_tmp + "." + WEIGHT],
+                    _prev_perm,
+                )
+
+        elif key.startswith(CLASSIFIER) and _prev_perm is not None:
+            # perm_state_dict[key + "." + BIAS] = (
+            #     model2_state_dict[key + "." + BIAS][row_ind]
+            #     if not key.endswith("6")
+            #     else model2_state_dict[key + "." + BIAS]
+            # )
             perm_state_dict[key + "." + BIAS] = (
-                model2_state_dict[key + "." + BIAS][row_ind]
+                torch.einsum(
+                    "ij, j... -> i...",
+                    perm_dict[key],
+                    model2_state_dict[key + "." + BIAS],
+                )
                 if not key.endswith("6")
                 else model2_state_dict[key + "." + BIAS]
             )
+
+            # perm_state_dict[key + "." + WEIGHT] = (
+            #     model2_state_dict[key + "." + WEIGHT][row_ind, :]
+            #     if not key.endswith("6")
+            #     else model2_state_dict[key + "." + WEIGHT]
+            # )
             perm_state_dict[key + "." + WEIGHT] = (
-                model2_state_dict[key + "." + WEIGHT][row_ind, :]
+                torch.einsum(
+                    "ij, j... -> i...",
+                    perm_dict[key],
+                    model2_state_dict[key + "." + WEIGHT],
+                )
                 if not key.endswith("6")
                 else model2_state_dict[key + "." + WEIGHT]
             )
+
             if hand_over:
                 _shape = int(
-                    model2_state_dict[key + "." + WEIGHT].shape[1] / _col_ind.shape[0]
+                    model2_state_dict[key + "." + WEIGHT].shape[1] / _prev_perm.shape[0]
                 )
-                _rolled_col_ind = torch.Tensor(
-                    [i * _shape + j for i in _col_ind for j in range(_shape)]
+                # _rolled_col_ind = torch.Tensor(
+                #     [i * _shape + j for i in _col_ind for j in range(_shape)]
+                # )
+                # perm_state_dict[key + "." + WEIGHT] = perm_state_dict[
+                #     key + "." + WEIGHT
+                # ][:, _rolled_col_ind]
+                perm_state_dict[key + "." + WEIGHT] = torch.einsum(
+                    "jk..., ik -> ji...",
+                    model2_state_dict[key + "." + WEIGHT],
+                    _prev_perm.unsqueeze(1)
+                    .repeat(1, _shape, 1)
+                    .reshape(-1, _prev_perm.shape[0]),
                 )
-                perm_state_dict[key + "." + WEIGHT] = perm_state_dict[
-                    key + "." + WEIGHT
-                ][:, _rolled_col_ind]
                 hand_over = False
             else:
-                perm_state_dict[key + "." + WEIGHT] = perm_state_dict[
-                    key + "." + WEIGHT
-                ][:, _col_ind]
+                perm_state_dict[key + "." + WEIGHT] = torch.einsum(
+                    "jk..., ik -> ji...",
+                    model2_state_dict[key + "." + WEIGHT],
+                    _prev_perm,
+                )
 
-        _col_ind = col_ind
+        _prev_perm = perm_dict[key]
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
