@@ -85,7 +85,8 @@ class ActMatching(_Permuter):
         """
         for key in model1.keys():
             if key != self.arch[-1]:
-                tmp = model1[key].T @ model2[key]
+                # tmp = model1[key].T @ model2[key]
+                tmp = torch.einsum("ij..., ik... -> jk", model1[key], model2[key])
                 tmp = (
                     tmp.detach().cpu().numpy()
                     if CUDA_AVAILABLE

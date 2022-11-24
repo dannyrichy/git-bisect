@@ -35,7 +35,9 @@ def cifar10_loader(
                 transforms.Normalize(
                     (0.5, 0.5, 0.5),
                     (0.5, 0.5, 0.5),
-                    transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10), #type:ignore
+                    transforms.AutoAugment(
+                        transforms.AutoAugmentPolicy.CIFAR10
+                    ),  # type:ignore
                 ),
             ]
         )
@@ -95,6 +97,4 @@ def hook_func(
     :type out: torch.Tensor
     """
     # Assuming the shape can either be of dimension 2 or 4
-    res_dict[name] = (
-        out if len(out.shape) == 2 else rearrange(out, "b c w h -> (b w h) c")
-    )
+    res_dict[name] = out
