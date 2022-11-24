@@ -78,7 +78,7 @@ def permute_model(
 
             perm_state_dict[_key_tmp + "." + BIAS] = torch.einsum(
                 "ij, j... -> i...",
-                perm_dict[_key_tmp],
+                perm_dict[key],
                 model2_state_dict[_key_tmp + "." + BIAS],
             )
 
@@ -88,11 +88,11 @@ def permute_model(
 
             perm_state_dict[_key_tmp + "." + WEIGHT] = torch.einsum(
                 "ij, j... -> i...",
-                perm_dict[_key_tmp],
+                perm_dict[key],
                 model2_state_dict[_key_tmp + "." + WEIGHT],
             )
 
-            if _prev_perm:
+            if _prev_perm is not None:
                 # perm_state_dict[_key_tmp + "." + WEIGHT] = perm_state_dict[
                 #     _key_tmp + "." + WEIGHT
                 # ][:, _col_ind, :, :]
@@ -147,9 +147,7 @@ def permute_model(
                 perm_state_dict[key + "." + WEIGHT] = torch.einsum(
                     "jk..., ik -> ji...",
                     model2_state_dict[key + "." + WEIGHT],
-                    _prev_perm.unsqueeze(1)
-                    .repeat(1, _shape, 1)
-                    .reshape(-1, _prev_perm.size(dim=0)),
+                    _prev_perm.unsqueeze(2).repeat(1, _shape, 1).reshape(_prev_perm.size(dim=0), -1),
                 )
                 hand_over = False
             else:
@@ -171,8 +169,8 @@ def activation_matching() -> dict[str, torch.Tensor]:
     :return: Permutation dictionary
     :rtype: dict[str, torch.Tensor]
     """
+    print("Computing using Activation Matching!")
     train_loader, test_loader, _ = cifar10_loader(batch_size=256)
-    # TODO: Create checker methods using arch and model_width params
     permuter = ActMatching(arch=LOOK_UP_LAYER)
 
     # Loading individually trained models
@@ -285,7 +283,6 @@ def generate_plots(
         }
         return _res
 
-    result["NaiveMatching"] = _generate_models(_model2=model2)
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
@@ -298,7 +295,7 @@ def generate_plots(
         _perm_model = permute_model(model=model2, perm_dict=ste_perm)
         _perm_model.eval()
         result["STEstimator"] = _generate_models(_model2=_perm_model)
-
+    result["NaiveMatching"] = _generate_models(_model2=model2)
     print("Done!")
     return result
 

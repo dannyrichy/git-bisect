@@ -1,4 +1,5 @@
-from permuter.mlp import run
+# from permuter.mlp import run
+from permuter.vgg import run
 
 if __name__ == "__main__":
 
