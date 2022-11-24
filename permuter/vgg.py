@@ -135,7 +135,8 @@ def permute_model(
 
             if hand_over:
                 _shape = int(
-                    model2_state_dict[key + "." + WEIGHT].shape[1] / _prev_perm.shape[0]
+                    model2_state_dict[key + "." + WEIGHT].shape[1]
+                    / _prev_perm.size(dim=0)
                 )
                 # _rolled_col_ind = torch.Tensor(
                 #     [i * _shape + j for i in _col_ind for j in range(_shape)]
@@ -148,7 +149,7 @@ def permute_model(
                     model2_state_dict[key + "." + WEIGHT],
                     _prev_perm.unsqueeze(1)
                     .repeat(1, _shape, 1)
-                    .reshape(-1, _prev_perm.shape[0]),
+                    .reshape(-1, _prev_perm.size(dim=0)),
                 )
                 hand_over = False
             else:
