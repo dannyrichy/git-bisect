@@ -1,9 +1,7 @@
-import copy
 from typing import Optional
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 
 from config import (
     DEVICE,
@@ -18,6 +16,7 @@ from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
 from models.mlp import LAYER_NAMES, register_hook
 from permuter._algo import ActMatching, STEstimator, WeightMatching
+from permuter.common import combine_models, get_losses
 
 WEIGHT_PERM = MLP_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = MLP_PERM_PATH.joinpath("act_perm.pkl")
@@ -66,64 +65,6 @@ def permute_model(
 
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
-
-
-def combine_models(
-    model1: torch.nn.Module, model2: torch.nn.Module, lam: float
-) -> torch.nn.Module:
-    """
-    Combine models using linear interpolation (1-lam)*model1 + lam*model2
-
-    :param model1: Model 1
-    :type model1: torch.nn.Module
-    :param model2: Model 2
-    :type model2: torch.nn.Module
-    :param lam: Lambda value in linear interpolation way
-    :type lam: float
-    :return: Combined model
-    :rtype: torch.nn.Module
-    """
-    # Creating dummy model
-    model3 = copy.deepcopy(model1).to(DEVICE)
-    model3_state_dict = model3.state_dict()
-    model1.to(DEVICE)
-    model2.to(DEVICE)
-    state_dict1 = model1.state_dict()
-    state_dict2 = model2.state_dict()
-
-    for key in model3_state_dict.keys():
-        model3_state_dict[key] = (1 - lam) * state_dict1[key] + lam * state_dict2[key]
-
-    model3.load_state_dict(model3_state_dict)
-    return model3
-
-
-def get_losses(
-    data_loader: DataLoader,
-    combined_models: list[torch.nn.Module],
-) -> np.ndarray:
-    """
-    Generates data for loss barrier plot
-
-    :param data_loader: Data Loader
-    :type data_loader: DataLoader
-    :param model1: Model 1
-    :type model1: torch.nn.Module
-    :param model2: Model 2
-    :type model2: torch.nn.Module
-    :param combined_models: list of combined models for different values of lambda
-    :type combined_models: list[torch.nn.Module]
-    :return: Loss barrier for combined models
-    :rtype: np.ndarray
-    """
-    loss = [0.0 for _ in range(len(combined_models))]
-    for inp, out in data_loader:
-        for ix, model in enumerate(combined_models):
-            loss[ix] += torch.nn.functional.cross_entropy(
-                model(inp.to(DEVICE)), out.to(DEVICE), reduction="sum"
-            ).item()
-
-    return np.array(loss) / len(data_loader.dataset)  # type: ignore
 
 
 def activation_matching() -> dict[str, torch.Tensor]:
