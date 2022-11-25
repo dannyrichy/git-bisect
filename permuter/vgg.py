@@ -49,7 +49,6 @@ def permute_model(
 
     perm_state_dict = permuted_model.state_dict()
     model2_state_dict = model.state_dict()
-    hand_over = None, True
     for key in perm_dict.keys():
         if key.startswith(FEATURES):
             # Key normally accounts for batch-norm
@@ -70,7 +69,7 @@ def permute_model(
             if not _next_key.startswith(CLASSIFIER):
                 perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
                     "jk..., ik -> ji...",
-                    model2_state_dict[_prev_key + "." + WEIGHT],
+                    model2_state_dict[_next_key + "." + WEIGHT],
                     perm_dict[key],
                 )
             else:
@@ -78,9 +77,9 @@ def permute_model(
                     model2_state_dict[_next_key + "." + WEIGHT].shape[1]
                     / perm_dict[key].size(dim=0)
                 )
-                perm_state_dict[key + "." + WEIGHT] = torch.einsum(
+                perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
                     "jk..., ki -> ji...",
-                    model2_state_dict[key + "." + WEIGHT],
+                    model2_state_dict[_next_key + "." + WEIGHT],
                     torch.kron(
                         perm_dict[key].T.contiguous(), torch.eye(_shape).to(DEVICE)
                     ),
@@ -88,7 +87,7 @@ def permute_model(
 
         elif key.startswith(CLASSIFIER):
             _next_key = INDEX_LAYER[key]
-            _iter = [i + "." + j for i in (key) for j in (WEIGHT, BIAS)]
+            _iter = [key + "." + j for j in (WEIGHT, BIAS)]
             for _key in _iter:
                 perm_state_dict[_key] = torch.einsum(
                     "ij, j... -> i...",
