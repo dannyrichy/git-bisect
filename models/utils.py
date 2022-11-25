@@ -3,6 +3,7 @@ from typing import Optional
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from einops import rearrange
 from torch.utils.data import DataLoader, random_split
 
 
@@ -34,14 +35,20 @@ def cifar10_loader(
                 transforms.Normalize(
                     (0.5, 0.5, 0.5),
                     (0.5, 0.5, 0.5),
-                    transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),
+                    transforms.AutoAugment(
+                        transforms.AutoAugmentPolicy.CIFAR10
+                    ),  # type:ignore
                 ),
             ]
         )
 
-    train_set = torchvision.datasets.CIFAR10(
-        root="./data", train=True, download=True, transform=train_transform
-    )
+        train_set = torchvision.datasets.CIFAR10(
+            root="./data", train=True, download=True, transform=train_transform
+        )
+    else:
+        train_set = torchvision.datasets.CIFAR10(
+            root="./data", train=True, download=True, transform=transform
+        )
 
     test_set = torchvision.datasets.CIFAR10(
         root="./data", train=False, download=True, transform=transform
@@ -89,4 +96,5 @@ def hook_func(
     :param out: _description_
     :type out: torch.Tensor
     """
+    # Assuming the shape can either be of dimension 2 or 4
     res_dict[name] = out

@@ -11,6 +11,8 @@ from config import DEVICE
 from models.utils import hook_func
 
 
+LAYER_NAMES = ["layer_1", "layer_2", "layer_3", "layer_4"]
+
 class MLP(nn.Module):
     """
     Multilayer Perceptron.
@@ -62,7 +64,7 @@ def register_hook(mlp_inst: MLP, activations_dict: dict) -> None:
             layer.register_forward_hook(hook=partial(hook_func, activations_dict, name))
 
 
-def mlp_train(
+def train(
     train_loader: DataLoader,
     val_loader: DataLoader,
     model: MLP,
