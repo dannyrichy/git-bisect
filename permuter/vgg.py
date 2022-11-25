@@ -14,6 +14,7 @@ from config import (
     VGG_MODEL1_PATH,
     VGG_MODEL2_PATH,
     VGG_PERM_PATH,
+    VGG_RESULTS_PATH,
     WEIGHT,
 )
 from helper import plt_dict, read_file, write_file
@@ -25,9 +26,6 @@ from permuter.common import combine_models, get_losses
 WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
 
-
-def get_indices(perm_mat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    return torch.argmax(perm_mat, dim=1), torch.argmax(perm_mat, dim=0)
 
 
 def permute_model(
@@ -225,10 +223,11 @@ def generate_plots(
         }
         return _res
 
+    result["NaiveMatching"] = _generate_models(_model2=model2)
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
-        torch.optim.swa_utils.update_bn(train_loader, _perm_model)
+        torch.optim.swa_utils.update_bn(train_loader, _perm_model, device=DEVICE)
         # TODO: #17 @Adhithyan8 Should train the permuted model here
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
@@ -241,7 +240,6 @@ def generate_plots(
         _perm_model.eval()
         torch.optim.swa_utils.update_bn(train_loader, _perm_model)
         result["STEstimator"] = _generate_models(_model2=_perm_model)
-    result["NaiveMatching"] = _generate_models(_model2=model2)
     print("Done!")
     return result
 
@@ -272,3 +270,4 @@ def run():
         model1=vgg_model1, model2=vgg_model2, act_perm=act_perm
     )
     plt_dict(results_dict)
+    write_file(VGG_RESULTS_PATH, results_dict)

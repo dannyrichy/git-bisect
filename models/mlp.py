@@ -99,9 +99,9 @@ def train(
                         val_loss += loss.item()
                         _, preds = torch.max(outputs, dim=1)
                         corr += torch.sum(preds == labels).item()
-                    accuracy = corr / len(val_loader.dataset)
+                    accuracy = corr / len(val_loader.dataset) # type:ignore
                 print(
-                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 2000:.3f} val_loss: {val_loss / (j+1):.3f} accuracy: {accuracy*100:.3f}%"
+                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 2000:.3f} val_loss: {val_loss / (j+1):.3f} accuracy: {accuracy*100:.3f}%" # type:ignore
                 )
                 running_loss = 0.0
     print("Training done! 🤖")
