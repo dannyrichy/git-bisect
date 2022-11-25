@@ -2,7 +2,6 @@ from typing import Optional
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 from torchvision.models import vgg16_bn
 
 from config import (
@@ -25,7 +24,6 @@ from permuter.common import combine_models, get_losses
 
 WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
-
 
 
 def permute_model(
