@@ -228,15 +228,18 @@ def generate_plots(
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
+        torch.optim.swa_utils.update_bn(train_loader, _perm_model)
         # TODO: #17 @Adhithyan8 Should train the permuted model here
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
+        torch.optim.swa_utils.update_bn(train_loader, _perm_model)
         result["WeightMatching"] = _generate_models(_model2=_perm_model)
     if ste_perm:
         _perm_model = permute_model(model=model2, perm_dict=ste_perm)
         _perm_model.eval()
+        torch.optim.swa_utils.update_bn(train_loader, _perm_model)
         result["STEstimator"] = _generate_models(_model2=_perm_model)
     result["NaiveMatching"] = _generate_models(_model2=model2)
     print("Done!")
