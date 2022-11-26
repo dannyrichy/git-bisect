@@ -226,8 +226,6 @@ def generate_plots(
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
-        
-        # TODO: #17 @Adhithyan8 Should train the permuted model here
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
