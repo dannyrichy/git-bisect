@@ -1,21 +1,27 @@
-from typing import Optional
 import copy
+from typing import Optional
 
 import numpy as np
 import torch
 from torchvision.models import vgg16_bn
 
 from config import (
+    ACT_MATCH,
     BIAS,
     CLASSIFIER,
     DEVICE,
     FEATURES,
     LAMBDA_ARRAY,
+    NAIVE_MATCH,
+    STE_MATCH,
+    TEST,
+    TRAIN,
     VGG_MODEL1_PATH,
     VGG_MODEL2_PATH,
     VGG_PERM_PATH,
     VGG_RESULTS_PATH,
     WEIGHT,
+    WEIGHT_MATCH,
 )
 from helper import plt_dict, read_file, write_file
 from models import cifar10_loader
@@ -211,30 +217,30 @@ def generate_plots(
             torch.optim.swa_utils.update_bn(train_loader, tmp, device=DEVICE)
             _models.append(tmp)
         _res = {
-            "Train": get_losses(
+            TRAIN: get_losses(
                 data_loader=train_loader,
                 combined_models=_models,
             ),
-            "Test": get_losses(
+            TEST: get_losses(
                 data_loader=test_loader,
                 combined_models=_models,
             ),
         }
         return _res
 
-    result["NaiveMatching"] = _generate_models(_model2=model2)
+    result[NAIVE_MATCH] = _generate_models(_model2=model2)
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
-        result["ActivationMatching"] = _generate_models(_model2=_perm_model)
+        result[ACT_MATCH] = _generate_models(_model2=_perm_model)
     if weight_perm:
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
-        result["WeightMatching"] = _generate_models(_model2=_perm_model)
+        result[WEIGHT_MATCH] = _generate_models(_model2=_perm_model)
     if ste_perm:
         _perm_model = permute_model(model=model2, perm_dict=ste_perm)
         _perm_model.eval()
-        result["STEstimator"] = _generate_models(_model2=_perm_model)
+        result[STE_MATCH] = _generate_models(_model2=_perm_model)
     print("Done!")
     return result
 

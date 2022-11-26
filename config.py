@@ -8,6 +8,13 @@ WEIGHT = "weight"
 BIAS = "bias"
 FEATURES = "features"
 CLASSIFIER = "classifier"
+NAIVE_MATCH = "NaiveMatching"
+ACT_MATCH = "ActivationMatching"
+WEIGHT_MATCH = "WeightMatching"
+STE_MATCH = "STEstimator"
+
+TRAIN = "Train"
+TEST = "Test"
 
 MLP_RESULTS_PATH = Path("Mlp_results.pkl")
 VGG_RESULTS_PATH = Path("Vgg_results.pkl")
