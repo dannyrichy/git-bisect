@@ -53,9 +53,15 @@ def read_file(file_path: pathlib.Path) -> Any:
 
 def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
     plt.figure()
+    _frmt = {
+        "Train":{"linestyle":'solid', "marker":'*'},
+            "Test":{"linestyle":'dashed', "marker":'*'}
+    }
     for method, res in results.items():
         for set, loss_arr in res.items():
-            plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set)
+            plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set, **_frmt[method])
 
+    plt.xlabel("Lambda")
+    plt.ylabel("Loss")
     plt.legend()
     plt.savefig("Results_" + time.strftime("%Y%m%d-%H%M%S"))
