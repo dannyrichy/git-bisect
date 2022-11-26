@@ -1,4 +1,5 @@
 from typing import Optional
+import copy
 
 import numpy as np
 import torch
@@ -43,7 +44,7 @@ def permute_model(
     # Creating model instance to hold the permuted model
     permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
 
-    perm_state_dict = permuted_model.state_dict()
+    perm_state_dict = copy.deepcopy(model.state_dict())
     model2_state_dict = model.state_dict()
     for key in perm_dict.keys():
         if key.startswith(FEATURES):
@@ -58,7 +59,7 @@ def permute_model(
                 perm_state_dict[_key] = torch.einsum(
                     "ij, j... -> i...",
                     perm_dict[key],
-                    model2_state_dict[_key],
+                    perm_state_dict[_key],
                 )
 
             # Reverse permutation for the next layer
@@ -88,9 +89,8 @@ def permute_model(
                 perm_state_dict[_key] = torch.einsum(
                     "ij, j... -> i...",
                     perm_dict[key],
-                    model2_state_dict[_key],
+                    perm_state_dict[_key],
                 )
-
             perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
                 "jk..., ik -> ji...",
                 model2_state_dict[_next_key + "." + WEIGHT],
@@ -208,6 +208,7 @@ def generate_plots(
         for lam in LAMBDA_ARRAY:
             tmp = combine_models(model1=model1, model2=_model2, lam=lam)
             tmp.eval()
+            torch.optim.swa_utils.update_bn(train_loader, tmp, device=DEVICE)
             _models.append(tmp)
         _res = {
             "Train": get_losses(
@@ -225,18 +226,16 @@ def generate_plots(
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
-        torch.optim.swa_utils.update_bn(train_loader, _perm_model, device=DEVICE)
+        
         # TODO: #17 @Adhithyan8 Should train the permuted model here
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
-        torch.optim.swa_utils.update_bn(train_loader, _perm_model)
         result["WeightMatching"] = _generate_models(_model2=_perm_model)
     if ste_perm:
         _perm_model = permute_model(model=model2, perm_dict=ste_perm)
         _perm_model.eval()
-        torch.optim.swa_utils.update_bn(train_loader, _perm_model)
         result["STEstimator"] = _generate_models(_model2=_perm_model)
     print("Done!")
     return result
