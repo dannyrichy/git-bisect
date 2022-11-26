@@ -5,7 +5,7 @@ import numpy
 import torch
 from torch.utils.data import DataLoader
 
-from config import DEVICE
+from config import BIAS, DEVICE, WEIGHT
 
 
 class PermDict:
@@ -93,3 +93,31 @@ def get_losses(
             ).item()
 
     return numpy.array(loss) / len(data_loader.dataset)  # type: ignore
+
+
+def perm_linear_layer(
+    model_sd: dict[str, torch.Tensor],
+    perm_dict: dict[str, torch.Tensor],
+    layer_look_up: dict[str, str],
+) -> dict[str, torch.Tensor]:
+    perm_state_dict = copy.deepcopy(model_sd)
+
+    for key in perm_dict.keys():
+        _next_key = layer_look_up[key]
+        _iter = [key + "." + j for j in (WEIGHT, BIAS)]
+
+        # forward permutation
+        for _key in _iter:
+            perm_state_dict[_key] = torch.einsum(
+                "ij, j... -> i...",
+                perm_dict[key],
+                perm_state_dict[_key],
+            )
+
+        # reverse permutation
+        perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
+            "jk..., ik -> ji...",
+            model_sd[_next_key + "." + WEIGHT],
+            perm_dict[key],
+        )
+    return perm_state_dict

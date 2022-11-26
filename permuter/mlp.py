@@ -1,9 +1,11 @@
+from copy import copy
 from typing import Optional
 
 import numpy as np
 import torch
 
 from config import (
+    BIAS,
     DEVICE,
     LAMBDA_ARRAY,
     MLP_MODEL1_PATH,
@@ -14,9 +16,9 @@ from config import (
 )
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
-from models.mlp import LAYER_NAMES, register_hook
+from models.mlp import INDEX_LAYER, LAYER_NAMES, register_hook
 from permuter._algo import ActMatching, STEstimator, WeightMatching
-from permuter.common import combine_models, get_losses
+from permuter.common import combine_models, get_losses, perm_linear_layer
 
 WEIGHT_PERM = MLP_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = MLP_PERM_PATH.joinpath("act_perm.pkl")
@@ -39,30 +41,9 @@ def permute_model(
     """
     # Creating model instance to hold the permuted model
     permuted_model = MLP().to(DEVICE)
-
-    perm_state_dict = permuted_model.state_dict()
-    model2_state_dict = model.state_dict()
-
-    for key in perm_state_dict.keys():
-        layer_name, weight_type = key.split(".")
-
-        if weight_type == WEIGHT and layer_name != LAYER_NAMES[0]:
-            prev_layer_name = LAYER_NAMES[LAYER_NAMES.index(layer_name) - 1]
-
-            # Considers both column and row permutation if applicable else only column transformation
-            # The latter case happens for last layer
-            perm_state_dict[key] = (
-                (
-                    perm_dict[layer_name]
-                    @ model2_state_dict[key]
-                    @ perm_dict[prev_layer_name].T
-                )
-                if layer_name in perm_dict
-                else model2_state_dict[key] @ perm_dict[prev_layer_name].T
-            )
-        elif layer_name in perm_dict:
-            perm_state_dict[key] = perm_dict[layer_name] @ model2_state_dict[key]
-
+    perm_state_dict = perm_linear_layer(
+        model_sd=model.state_dict(), perm_dict=perm_dict, layer_look_up=INDEX_LAYER
+    )
     permuted_model.load_state_dict(perm_state_dict)
     return permuted_model
 
