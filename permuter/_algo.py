@@ -373,7 +373,7 @@ class STEstimator(_Permuter):
                             )
                         ).unsqueeze(0)
                     )
-
+                    
                 # Defining the optimizer
                 optim = torch.optim.SGD(params=params_hat, lr=0.01, momentum=0.9)
                 logits = func(params_merged, inp.to(DEVICE))
