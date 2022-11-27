@@ -104,7 +104,7 @@ class ActMatching(_Permuter):
 class WeightMatching(_Permuter):
     def __init__(self, arch: Sequence[str]) -> None:
         """
-        _summary_
+        _summary_s
 
         :param arch: Architecture
         :type arch: list[int]
@@ -118,10 +118,10 @@ class WeightMatching(_Permuter):
         :param m_weights: Model weight dictionary to construct the permutation
         :type m_weights: dict[str, torch.Tensor]
         """
-        for key, val in m_weights.items():
-            layer_name, weight_type = key.split(".")
-            if weight_type == WEIGHT and layer_name != self.arch[-1]:
-                self.perm[layer_name] = torch.eye(val.shape[0]).to(DEVICE)
+        for key in self.perm.keys:
+            self.perm[key] = torch.eye(m_weights[key + "." + WEIGHT].shape[0]).to(
+                DEVICE
+            )
 
     def evaluate_permutation(
         self,
@@ -217,6 +217,7 @@ class STEstimator(_Permuter):
     :param _Permuter: Base Class
     :type _Permuter: _Permuter
     """
+
     def __init__(self, arch: Sequence[str]) -> None:
         """
         Straight Through Estimator
