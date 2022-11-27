@@ -44,11 +44,29 @@ INDEX_LAYER = {
     "features.35": ("features.34", "features.37"),
     "features.38": ("features.37", "features.40"),
     "features.41": ("features.40", "classifier.0"),
-    "classifier.0": ("classifier.3"),
-    "classifier.3": ("classifier.6"),
+    "classifier.0": ("features.41", "classifier.3"),
+    "classifier.3": ("classifier.0", "classifier.6"),
 }
 
-LOOK_UP_WEIGHTS = {
+WEIGHT_PERM_LOOKUP = {
+    "features.1": (None, "features.0", "features.3", "features.4"),
+    "features.4": ("features.1", "features.3", "features.7", "features.8"),
+    "features.8": ("features.4", "features.7", "features.10", "features.11"),
+    "features.11": ("features.8", "features.10", "features.14", "features.15"),
+    "features.15": ("features.11", "features.14", "features.17", "features.18"),
+    "features.18": ("features.15", "features.17", "features.20", "features.21"),
+    "features.21": ("features.18", "features.20", "features.24", "features.25"),
+    "features.25": ("features.21", "features.24", "features.27", "features.28"),
+    "features.28": ("features.25", "features.27", "features.30", "features.31"),
+    "features.31": ("features.28", "features.30", "features.34", "features.35"),
+    "features.35": ("features.31", "features.34", "features.37", "features.38"),
+    "features.38": ("features.35", "features.37", "features.40", "features.41"),
+    "features.41": ("features.38", "features.40", "classifier.0", "classifier.0"),
+    "classifier.0": ("features.41", "classifier.3"),
+    "classifier.3": ("classifier.0", "classifier.6"),
+}
+
+LOOK_UP_WEIGHTS = [
     "features.0.weight",
     "features.3.weight",
     "features.7.weight",
@@ -65,7 +83,7 @@ LOOK_UP_WEIGHTS = {
     "classifier.0.weight",
     "classifier.3.weight",
     "classifier.6.weight",
-}
+]
 
 
 def register_hook(inst: VGG, activations_dict: dict) -> None:
@@ -139,9 +157,9 @@ def train(
                         val_loss += loss.item()
                         _, preds = torch.max(outputs, dim=1)
                         corr += torch.sum(preds == labels).item()
-                    accuracy = corr / len(val_loader.dataset) # type:ignore
+                    accuracy = corr / len(val_loader.dataset)  # type:ignore
                 print(
-                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 2000:.3f} val_loss: {val_loss /len(val_loader.dataset):.3f} accuracy: {accuracy*100:.3f}%" # type:ignore
+                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 2000:.3f} val_loss: {val_loss /len(val_loader.dataset):.3f} accuracy: {accuracy*100:.3f}%"  # type:ignore
                 )
                 running_loss = 0.0
             scheduler.step()

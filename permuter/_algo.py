@@ -8,7 +8,7 @@ from scipy.optimize import linear_sum_assignment
 from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 
-from config import BIAS, CUDA_AVAILABLE, DEVICE, WEIGHT
+from config import BIAS, CLASSIFIER, CUDA_AVAILABLE, DEVICE, FEATURES, WEIGHT
 from helper import timer_func
 from permuter.common import PermDict
 
@@ -102,7 +102,7 @@ class ActMatching(_Permuter):
 
 
 class WeightMatching(_Permuter):
-    def __init__(self, arch: Sequence[str]) -> None:
+    def __init__(self, arch: Sequence[str], perm_lookup: dict[str, tuple]) -> None:
         """
         _summary_s
 
@@ -110,6 +110,7 @@ class WeightMatching(_Permuter):
         :type arch: list[int]
         """
         super().__init__(arch)
+        self.lookup = perm_lookup
 
     def _initialise_perm(self, m_weights: dict[str, torch.Tensor]) -> None:
         """
@@ -122,6 +123,117 @@ class WeightMatching(_Permuter):
             self.perm[key] = torch.eye(m_weights[key + "." + WEIGHT].shape[0]).to(
                 DEVICE
             )
+
+    def _evaluate_conv_cost(self, layer_name: str, m1_weights, m2_weights):
+        _prev_perm, _conv, _next_conv, _next_perm = self.lookup[layer_name]
+        _cost_matrix = torch.zeros_like(self.perm[layer_name])
+
+        _cost_matrix += torch.einsum(
+            "ij..., jk, lk... -> il",
+            m1_weights[_conv + "." + WEIGHT],
+            self.perm[_prev_perm]
+            if _prev_perm in self.perm.keys
+            else torch.eye(m1_weights[_conv + "." + WEIGHT].shape[1]),
+            m2_weights[_conv + "." + WEIGHT],
+        )
+        if _next_conv.startswith(CLASSIFIER):
+            _shape = int(
+                m2_weights[_next_conv + "." + WEIGHT].shape[1]
+                / self.perm[layer_name].size(dim=0)
+            )
+            _cost_matrix += torch.einsum(
+                "i...j, jk, k...l -> il",
+                torch.stack(m1_weights[_next_conv + "." + WEIGHT].T.split(_shape)),
+                self.perm[_next_perm]
+                if _next_perm in self.perm.keys
+                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]),
+                torch.stack(m2_weights[_next_conv + "." + WEIGHT].T.split(_shape)),
+            )
+        else:
+            _cost_matrix += torch.einsum(
+                "ji..., jk, kl... -> il",
+                m1_weights[_next_conv + "." + WEIGHT],
+                self.perm[_next_perm]
+                if _next_perm in self.perm.keys
+                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]),
+                m2_weights[_next_conv + "." + WEIGHT],
+            )
+        _cost_matrix += torch.einsum(
+            "i,j -> ij",
+            m1_weights[layer_name + "." + BIAS],
+            m2_weights[layer_name + "." + BIAS],
+        )
+        _cost_matrix += torch.einsum(
+            "i,j -> ij",
+            m1_weights[layer_name + "." + WEIGHT],
+            m2_weights[layer_name + "." + WEIGHT],
+        )
+        _cost_matrix += torch.einsum(
+            "i,j -> ij", m1_weights[_conv + "." + BIAS], m2_weights[_conv + "." + BIAS]
+        )
+        return _cost_matrix
+
+    def _evaluate_linear_cost(
+        self, layer_name: str, m1_weights, m2_weights
+    ) -> torch.Tensor:
+        """
+        Cost matrix for linear layer
+
+        :param layer_name: _description_
+        :type layer_name: str
+        :param m1_weights: _description_
+        :type m1_weights: _type_
+        :param m2_weights: _description_
+        :type m2_weights: _type_
+        :return: _description_
+        :rtype: torch.Tensor
+        """
+        _prev_layer, _next_layer = self.lookup[layer_name]
+        _cost_matrix = torch.zeros_like(self.perm[layer_name])
+
+        if _prev_layer.startswith(FEATURES):
+            # If previous layer is of type features
+            _shape = int(
+                m2_weights[layer_name + "." + WEIGHT].shape[1]
+                / self.perm[_prev_layer].size(dim=0)
+            )
+            _cost_matrix += torch.einsum(
+                "ij..., jk, lk... -> il",
+                m1_weights[layer_name + "." + WEIGHT],
+                torch.kron(
+                    self.perm[_prev_layer].contiguous(), torch.eye(_shape).to(DEVICE)
+                ),
+                m2_weights[layer_name + "." + WEIGHT],
+            ) + torch.einsum(
+                "ji..., jk, kl... -> il",
+                m1_weights[_next_layer + "." + WEIGHT],
+                self.perm[_next_layer],
+                m2_weights[_next_layer + "." + WEIGHT],
+            )
+        else:
+            _cost_matrix += torch.einsum(
+                "ij..., jk, lk... -> il",
+                m1_weights[layer_name + "." + WEIGHT],
+                self.perm[_prev_layer]
+                if _prev_layer in self.perm.keys
+                else torch.eye(m1_weights[layer_name + "." + WEIGHT].shape[1]),
+                m2_weights[layer_name + "." + WEIGHT],
+            )
+            _cost_matrix += torch.einsum(
+                "ji..., jk, kl... -> il",
+                m1_weights[_next_layer + "." + WEIGHT],
+                self.perm[_next_layer]
+                if _next_layer in self.perm.keys
+                else torch.eye(m1_weights[_next_layer + "." + WEIGHT].shape[0]),
+                m2_weights[_next_layer + "." + WEIGHT],
+            )
+
+        _cost_matrix += torch.einsum(
+            "i,j -> ij",
+            m1_weights[layer_name + "." + BIAS],
+            m2_weights[layer_name + "." + BIAS],
+        )
+        return _cost_matrix
 
     def evaluate_permutation(
         self,
@@ -147,43 +259,19 @@ class WeightMatching(_Permuter):
             abs_diff = 0.0
             for layer_name in self.perm.keys:
                 # Getting previous layer name and next layer name
-                ix = self.arch.index(layer_name)
+                if layer_name.startswith(FEATURES):
+                    _cost_matrix = self._evaluate_conv_cost(
+                        layer_name=layer_name,
+                        m1_weights=m1_weights,
+                        m2_weights=m2_weights,
+                    )
 
-                # Adding weights term
-                if ix == 0:
-                    # Ignoring the permutation in the first layer
-                    _cost_matrix = (
-                        m1_weights[layer_name + "." + WEIGHT]
-                        @ m2_weights[layer_name + "." + WEIGHT].T
-                        + m1_weights[self.arch[ix + 1] + "." + WEIGHT].T
-                        @ self.perm[self.arch[ix + 1]]
-                        @ m2_weights[self.arch[ix + 1] + "." + WEIGHT]
-                    )
-                elif ix == self.model_width - 2:
-                    # Ignoring the permutation in the last layer
-                    _cost_matrix = (
-                        m1_weights[layer_name + "." + WEIGHT]
-                        @ self.perm[self.arch[ix - 1]]
-                        @ m2_weights[layer_name + "." + WEIGHT].T
-                        + m1_weights[self.arch[ix + 1] + "." + WEIGHT].T
-                        @ m2_weights[self.arch[ix + 1] + "." + WEIGHT]
-                    )
                 else:
-                    #  Every other way
-                    _cost_matrix = (
-                        m1_weights[layer_name + "." + WEIGHT]
-                        @ self.perm[self.arch[ix - 1]]
-                        @ m2_weights[layer_name + "." + WEIGHT].T
-                        + m1_weights[self.arch[ix + 1] + "." + WEIGHT].T
-                        @ self.perm[self.arch[ix + 1]]
-                        @ m2_weights[self.arch[ix + 1] + "." + WEIGHT]
+                    _cost_matrix = self._evaluate_linear_cost(
+                        layer_name=layer_name,
+                        m1_weights=m1_weights,
+                        m2_weights=m2_weights,
                     )
-
-                # Adding bias term part
-                _cost_matrix += (
-                    m1_weights[layer_name + "." + BIAS].unsqueeze(1)
-                    @ m2_weights[layer_name + "." + BIAS].unsqueeze(1).T
-                )
 
                 self.perm[layer_name] = compute_permutation(
                     _cost_matrix.detach().cpu().numpy()
@@ -218,7 +306,7 @@ class STEstimator(_Permuter):
     :type _Permuter: _Permuter
     """
 
-    def __init__(self, arch: Sequence[str]) -> None:
+    def __init__(self, arch: Sequence[str], perm_lookup) -> None:
         """
         Straight Through Estimator
 
@@ -226,7 +314,7 @@ class STEstimator(_Permuter):
         :type arch: Sequence[str]
         """
         super().__init__(arch)
-        self.weight_matching = WeightMatching(arch=arch)
+        self.weight_matching = WeightMatching(arch=arch, perm_lookup=perm_lookup)
 
     def evaluate_permutation(
         self,

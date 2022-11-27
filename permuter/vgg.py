@@ -25,7 +25,13 @@ from config import (
 )
 from helper import plt_dict, read_file, write_file
 from models import cifar10_loader
-from models.vgg import INDEX_LAYER, LOOK_UP_LAYER, register_hook, train
+from models.vgg import (
+    INDEX_LAYER,
+    LOOK_UP_LAYER,
+    WEIGHT_PERM_LOOKUP,
+    register_hook,
+    train,
+)
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 from permuter.common import combine_models, get_losses
 
@@ -165,7 +171,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
     vgg_model2.to(DEVICE)
     vgg_model2.eval()
 
-    weight_matcher = WeightMatching(arch=LOOK_UP_LAYER)
+    weight_matcher = WeightMatching(arch=LOOK_UP_LAYER, perm_lookup=WEIGHT_PERM_LOOKUP)
     _permutation_dict = weight_matcher.evaluate_permutation(
         m1_weights=vgg_model1.state_dict(), m2_weights=vgg_model2.state_dict()
     )

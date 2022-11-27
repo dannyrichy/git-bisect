@@ -13,6 +13,12 @@ from models.utils import hook_func
 LAYER_NAMES = ["layer_1", "layer_2", "layer_3", "layer_4"]
 INDEX_LAYER = {"layer_1": "layer_2", "layer_2": "layer_3", "layer_3": "layer_4"}
 
+WEIGHT_PERM_LOOKUP = {
+    "layer_1": (None, "layer_2"),
+    "layer_2": ("layer_1", "layer_3"),
+    "layer_3": ("layer_2", "layer_4"),
+}
+
 
 class MLP(nn.Module):
     """
