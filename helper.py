@@ -6,7 +6,16 @@ from typing import Any
 import numpy
 from matplotlib import pyplot as plt
 
-from config import LAMBDA_ARRAY, TIME_FLAG
+from config import (
+    ACT_MATCH,
+    LAMBDA_ARRAY,
+    NAIVE_MATCH,
+    STE_MATCH,
+    TEST,
+    TIME_FLAG,
+    TRAIN,
+    WEIGHT_MATCH,
+)
 
 
 def timer_func(name: str):
@@ -53,9 +62,19 @@ def read_file(file_path: pathlib.Path) -> Any:
 
 def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
     plt.figure()
+    _fmt = {
+        TRAIN: {"linestyle": "solid", "marker": "*"},
+        TEST: {"linestyle": "dashed", "marker": "*"},
+        NAIVE_MATCH: {"color": "k"},
+        ACT_MATCH: {"color": "r"},
+        WEIGHT_MATCH: {"color": "g"},
+        STE_MATCH: {"color": "b"},
+    }
     for method, res in results.items():
         for set, loss_arr in res.items():
-            plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set)
+            plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set, **_fmt[set], **_fmt[method])
 
+    plt.xlabel("Lambda")
+    plt.ylabel("Loss")
     plt.legend()
     plt.savefig("Results_" + time.strftime("%Y%m%d-%H%M%S"))

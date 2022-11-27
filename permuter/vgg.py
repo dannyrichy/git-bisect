@@ -1,20 +1,27 @@
+import copy
 from typing import Optional
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 from torchvision.models import vgg16_bn
 
 from config import (
+    ACT_MATCH,
     BIAS,
     CLASSIFIER,
     DEVICE,
     FEATURES,
     LAMBDA_ARRAY,
+    NAIVE_MATCH,
+    STE_MATCH,
+    TEST,
+    TRAIN,
     VGG_MODEL1_PATH,
     VGG_MODEL2_PATH,
     VGG_PERM_PATH,
+    VGG_RESULTS_PATH,
     WEIGHT,
+    WEIGHT_MATCH,
 )
 from helper import plt_dict, read_file, write_file
 from models import cifar10_loader
@@ -24,10 +31,6 @@ from permuter.common import combine_models, get_losses
 
 WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
-
-
-def get_indices(perm_mat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    return torch.argmax(perm_mat, dim=1), torch.argmax(perm_mat, dim=0)
 
 
 def permute_model(
@@ -47,7 +50,7 @@ def permute_model(
     # Creating model instance to hold the permuted model
     permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
 
-    perm_state_dict = permuted_model.state_dict()
+    perm_state_dict = copy.deepcopy(model.state_dict())
     model2_state_dict = model.state_dict()
     for key in perm_dict.keys():
         if key.startswith(FEATURES):
@@ -62,7 +65,7 @@ def permute_model(
                 perm_state_dict[_key] = torch.einsum(
                     "ij, j... -> i...",
                     perm_dict[key],
-                    model2_state_dict[_key],
+                    perm_state_dict[_key],
                 )
 
             # Reverse permutation for the next layer
@@ -92,9 +95,8 @@ def permute_model(
                 perm_state_dict[_key] = torch.einsum(
                     "ij, j... -> i...",
                     perm_dict[key],
-                    model2_state_dict[_key],
+                    perm_state_dict[_key],
                 )
-
             perm_state_dict[_next_key + "." + WEIGHT] = torch.einsum(
                 "jk..., ik -> ji...",
                 model2_state_dict[_next_key + "." + WEIGHT],
@@ -212,33 +214,33 @@ def generate_plots(
         for lam in LAMBDA_ARRAY:
             tmp = combine_models(model1=model1, model2=_model2, lam=lam)
             tmp.eval()
+            torch.optim.swa_utils.update_bn(train_loader, tmp, device=DEVICE)
             _models.append(tmp)
         _res = {
-            "Train": get_losses(
+            TRAIN: get_losses(
                 data_loader=train_loader,
                 combined_models=_models,
             ),
-            "Test": get_losses(
+            TEST: get_losses(
                 data_loader=test_loader,
                 combined_models=_models,
             ),
         }
         return _res
 
+    result[NAIVE_MATCH] = _generate_models(_model2=model2)
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
-        # TODO: #17 @Adhithyan8 Should train the permuted model here
-        result["ActivationMatching"] = _generate_models(_model2=_perm_model)
+        result[ACT_MATCH] = _generate_models(_model2=_perm_model)
     if weight_perm:
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
-        result["WeightMatching"] = _generate_models(_model2=_perm_model)
+        result[WEIGHT_MATCH] = _generate_models(_model2=_perm_model)
     if ste_perm:
         _perm_model = permute_model(model=model2, perm_dict=ste_perm)
         _perm_model.eval()
-        result["STEstimator"] = _generate_models(_model2=_perm_model)
-    result["NaiveMatching"] = _generate_models(_model2=model2)
+        result[STE_MATCH] = _generate_models(_model2=_perm_model)
     print("Done!")
     return result
 
@@ -269,3 +271,4 @@ def run():
         model1=vgg_model1, model2=vgg_model2, act_perm=act_perm
     )
     plt_dict(results_dict)
+    write_file(VGG_RESULTS_PATH, results_dict)
