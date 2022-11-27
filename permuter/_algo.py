@@ -133,7 +133,7 @@ class WeightMatching(_Permuter):
             m1_weights[_conv + "." + WEIGHT],
             self.perm[_prev_perm]
             if _prev_perm in self.perm.keys
-            else torch.eye(m1_weights[_conv + "." + WEIGHT].shape[1]),
+            else torch.eye(m1_weights[_conv + "." + WEIGHT].shape[1]).to(DEVICE),
             m2_weights[_conv + "." + WEIGHT],
         )
         if _next_conv.startswith(CLASSIFIER):
@@ -142,11 +142,11 @@ class WeightMatching(_Permuter):
                 / self.perm[layer_name].size(dim=0)
             )
             _cost_matrix += torch.einsum(
-                "i...j, jk, k...l -> il",
+                "i...j, jk, l...k -> il",
                 torch.stack(m1_weights[_next_conv + "." + WEIGHT].T.split(_shape)),
                 self.perm[_next_perm]
                 if _next_perm in self.perm.keys
-                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]),
+                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(DEVICE),
                 torch.stack(m2_weights[_next_conv + "." + WEIGHT].T.split(_shape)),
             )
         else:
@@ -155,7 +155,7 @@ class WeightMatching(_Permuter):
                 m1_weights[_next_conv + "." + WEIGHT],
                 self.perm[_next_perm]
                 if _next_perm in self.perm.keys
-                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]),
+                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(DEVICE),
                 m2_weights[_next_conv + "." + WEIGHT],
             )
         _cost_matrix += torch.einsum(
@@ -216,7 +216,7 @@ class WeightMatching(_Permuter):
                 m1_weights[layer_name + "." + WEIGHT],
                 self.perm[_prev_layer]
                 if _prev_layer in self.perm.keys
-                else torch.eye(m1_weights[layer_name + "." + WEIGHT].shape[1]),
+                else torch.eye(m1_weights[layer_name + "." + WEIGHT].shape[1]).to(DEVICE),
                 m2_weights[layer_name + "." + WEIGHT],
             )
             _cost_matrix += torch.einsum(
@@ -224,7 +224,7 @@ class WeightMatching(_Permuter):
                 m1_weights[_next_layer + "." + WEIGHT],
                 self.perm[_next_layer]
                 if _next_layer in self.perm.keys
-                else torch.eye(m1_weights[_next_layer + "." + WEIGHT].shape[0]),
+                else torch.eye(m1_weights[_next_layer + "." + WEIGHT].shape[0]).to(DEVICE),
                 m2_weights[_next_layer + "." + WEIGHT],
             )
 

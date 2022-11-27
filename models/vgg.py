@@ -44,8 +44,8 @@ INDEX_LAYER = {
     "features.35": ("features.34", "features.37"),
     "features.38": ("features.37", "features.40"),
     "features.41": ("features.40", "classifier.0"),
-    "classifier.0": ("features.41", "classifier.3"),
-    "classifier.3": ("classifier.0", "classifier.6"),
+    "classifier.0": ("classifier.3"),
+    "classifier.3": ("classifier.6"),
 }
 
 WEIGHT_PERM_LOOKUP = {
