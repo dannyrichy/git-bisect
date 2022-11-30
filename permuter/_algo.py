@@ -143,14 +143,17 @@ class WeightMatching(_Permuter):
                 m2_weights[_next_conv + "." + WEIGHT].shape[1]
                 / self.perm[layer_name].size(dim=0)
             )
-            _cost_matrix += torch.einsum(
-                "i...j, jk, l...k -> il",
-                torch.stack(m1_weights[_next_conv + "." + WEIGHT].T.split(_shape)),
+            _tmp = torch.einsum(
+                "j...i, jk, k...l -> il",
+                m1_weights[_next_conv + "." + WEIGHT],
                 self.perm[_next_perm]
                 if _next_perm in self.perm.keys
                 else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(DEVICE),
-                torch.stack(m2_weights[_next_conv + "." + WEIGHT].T.split(_shape)),
+                m2_weights[_next_conv + "." + WEIGHT],
             )
+            _cost_matrix += torch.nn.functional.conv2d(_tmp.unsqueeze(0).unsqueeze(0),
+                                                       weight=torch.eye(_shape).unsqueeze(0).unsqueeze(0).to(DEVICE),
+                                                       stride=_shape).squeeze()
         else:
             _cost_matrix += torch.einsum(
                 "ji..., jk, kl... -> il",
