@@ -37,6 +37,7 @@ from permuter.common import combine_models, get_losses
 
 WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
 ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
+STE_PERM = VGG_PERM_PATH.joinpath("ste_perm.pkl")
 
 
 def permute_model(
@@ -177,6 +178,26 @@ def weight_matching() -> dict[str, torch.Tensor]:
     )
     return _permutation_dict
 
+def ste_matching() -> dict[str, torch.Tensor]:
+    print("Running STEstimator")
+    train_loader, test_loader, _ = cifar10_loader(batch_size=256)
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
+    vgg_model1.to(DEVICE)
+    vgg_model1.eval()
+
+    vgg_model2.load_state_dict(torch.load(VGG_MODEL2_PATH))
+    vgg_model2.to(DEVICE)
+    vgg_model2.eval()
+
+    ste = STEstimator(arch=LOOK_UP_LAYER, perm_lookup=WEIGHT_PERM_LOOKUP)
+    perm, losses = ste.evaluate_permutation(
+        model1=vgg_model1,
+        model2=vgg_model2,
+        data_loader=train_loader,
+        permute_model=permute_model,
+    )
+    return perm
 
 def generate_plots(
     model1: torch.nn.Module,
@@ -240,12 +261,12 @@ def generate_plots(
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
         result[ACT_MATCH] = _generate_models(_model2=_perm_model)
-        print("Activation results are done")
+        print("Activation results are done!")
     if weight_perm:
         _perm_model = permute_model(model=model2, perm_dict=weight_perm)
         _perm_model.eval()
         result[WEIGHT_MATCH] = _generate_models(_model2=_perm_model)
-        print("Weight match results are done")
+        print("Weight match results are done!")
     if ste_perm:
         _perm_model = permute_model(model=model2, perm_dict=ste_perm)
         _perm_model.eval()
@@ -266,6 +287,7 @@ def run():
         write_file(ACT_PERM, act_perm)
     else:
         act_perm = read_file(ACT_PERM)
+        print("Loaded activation perm!")
     
     if not WEIGHT_PERM.is_file():
         weight_perm = weight_matching()
@@ -273,6 +295,13 @@ def run():
     else:
         weight_perm = read_file(WEIGHT_PERM)
         print("Loaded weight perm!")
+        
+    # if not STE_PERM.is_file():
+    #     ste_perm = ste_matching()
+    #     write_file(STE_PERM, ste_perm)
+    # else:
+    #     ste_perm = read_file(STE_PERM)
+    #     print("Loaded ste perm!")
 
     vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
@@ -285,7 +314,7 @@ def run():
 
     results_dict = generate_plots(
         model1=vgg_model1, model2=vgg_model2, 
-        # act_perm=act_perm,
+        act_perm=act_perm,
         weight_perm=weight_perm
     )
     plt_dict(results_dict)
