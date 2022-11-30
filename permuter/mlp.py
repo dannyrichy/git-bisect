@@ -226,7 +226,7 @@ def run():
         write_file(STE_PERM, ste_perm)
     else:
         ste_perm = read_file(STE_PERM)
-
+    
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)

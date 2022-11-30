@@ -1,4 +1,5 @@
 import copy
+import random
 from typing import Callable, Sequence, Tuple
 
 import functorch
@@ -255,9 +256,9 @@ class WeightMatching(_Permuter):
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
 
-        while _ix < 1000 and abs_diff > 5.0:
+        while _ix < 1000 and abs_diff > 1.0:
             abs_diff = 0.0
-            for layer_name in self.perm.keys:
+            for layer_name in random.sample(self.perm.keys,  len(self.perm.keys)):
                 # Getting previous layer name and next layer name
                 if layer_name.startswith(FEATURES):
                     _cost_matrix = self._evaluate_conv_cost(
@@ -285,7 +286,7 @@ class WeightMatching(_Permuter):
             _ix += 1
             abs_diff = abs_diff
             prev_perm = copy.deepcopy(self.perm)
-
+        print(f"Ran for {_ix} iterations")
         return self.perm()
 
     def get_permutation(self) -> dict[str, torch.Tensor]:

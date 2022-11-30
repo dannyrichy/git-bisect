@@ -282,19 +282,19 @@ def run():
     # model = vgg16_bn(num_classes=10)
     # train(train_loader, val_loader, model, epochs=20, model_name="vgg")
 
-    if not ACT_PERM.is_file():
-        act_perm = activation_matching()
-        write_file(ACT_PERM, act_perm)
-    else:
-        act_perm = read_file(ACT_PERM)
-        print("Loaded activation perm!")
+    # if not ACT_PERM.is_file():
+    #     act_perm = activation_matching()
+    #     write_file(ACT_PERM, act_perm)
+    # else:
+    #     act_perm = read_file(ACT_PERM)
+    #     print("Loaded activation perm!")
     
-    if not WEIGHT_PERM.is_file():
-        weight_perm = weight_matching()
-        write_file(WEIGHT_PERM, weight_perm)
-    else:
-        weight_perm = read_file(WEIGHT_PERM)
-        print("Loaded weight perm!")
+    # if not WEIGHT_PERM.is_file():
+    #     weight_perm = weight_matching()
+    #     write_file(WEIGHT_PERM, weight_perm)
+    # else:
+    #     weight_perm = read_file(WEIGHT_PERM)
+    #     print("Loaded weight perm!")
         
     # if not STE_PERM.is_file():
     #     ste_perm = ste_matching()
@@ -302,7 +302,8 @@ def run():
     # else:
     #     ste_perm = read_file(STE_PERM)
     #     print("Loaded ste perm!")
-
+    weight_perm = weight_matching()
+    
     vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
@@ -314,7 +315,7 @@ def run():
 
     results_dict = generate_plots(
         model1=vgg_model1, model2=vgg_model2, 
-        act_perm=act_perm,
+        # act_perm=act_perm,
         weight_perm=weight_perm
     )
     plt_dict(results_dict)

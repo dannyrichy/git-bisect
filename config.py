@@ -36,4 +36,4 @@ VGG_PERM_PATH.mkdir(exist_ok=True, parents=True)
 CUDA_AVAILABLE = torch.cuda.is_available()
 DEVICE = torch.device("cuda" if CUDA_AVAILABLE else "cpu")
 
-LAMBDA_ARRAY = numpy.linspace(start=0, stop=1, num=21, dtype=numpy.float32)
+LAMBDA_ARRAY = numpy.linspace(start=0, stop=1, num=5, dtype=numpy.float32)
