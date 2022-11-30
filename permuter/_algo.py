@@ -103,6 +103,7 @@ class ActMatching(_Permuter):
 
 
 class WeightMatching(_Permuter):
+    MAX_ITER:int = 100
     def __init__(self, arch: Sequence[str], perm_lookup: dict[str, tuple]) -> None:
         """
         _summary_s
@@ -192,7 +193,7 @@ class WeightMatching(_Permuter):
         _prev_layer, _next_layer = self.lookup[layer_name]
         _cost_matrix = torch.zeros_like(self.perm[layer_name])
 
-        if _prev_layer.startswith(FEATURES):
+        if _prev_layer is not None and _prev_layer.startswith(FEATURES):
             # If previous layer is of type features
             _shape = int(
                 m2_weights[layer_name + "." + WEIGHT].shape[1]
@@ -256,7 +257,7 @@ class WeightMatching(_Permuter):
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
 
-        while _ix < 1000 and abs_diff > 1.0:
+        while _ix < self.MAX_ITER and abs_diff > 1.0:
             abs_diff = 0.0
             for layer_name in random.sample(self.perm.keys,  len(self.perm.keys)):
                 # Getting previous layer name and next layer name
