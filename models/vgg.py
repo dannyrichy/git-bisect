@@ -116,7 +116,7 @@ def train(
             "params": [
                 p for n, p in model.named_parameters() if (n in LOOK_UP_WEIGHTS)
             ],
-            "weight_decay": 0.01,
+            "weight_decay": 1e-4,
         },
         {
             "params": [
@@ -127,9 +127,9 @@ def train(
     ]
 
     criterion = cross_entropy
-    optimizer = optim.SGD(optimizer_parameters, lr=1e-3, momentum=0.9)
+    optimizer = optim.SGD(optimizer_parameters, lr=1e-5, momentum=0.9)
     scheduler = optim.lr_scheduler.OneCycleLR(
-        optimizer, max_lr=0.01, steps_per_epoch=len(train_loader), epochs=epochs
+        optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=epochs
     )
     model.to(DEVICE)
 
