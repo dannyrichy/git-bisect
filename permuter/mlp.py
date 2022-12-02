@@ -28,6 +28,7 @@ STE_PERM = MLP_PERM_PATH.joinpath("ste_perm.pkl")
 def permute_model(
     model: torch.nn.Module,
     perm_dict: dict[str, torch.Tensor],
+    width:int=512
 ) -> torch.nn.Module:
     """
     Permute the model with the dictionary
@@ -40,7 +41,7 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
-    permuted_model = MLP().to(DEVICE)
+    permuted_model = MLP(WIDTH=width).to(DEVICE)
     perm_state_dict = perm_linear_layer(
         model_sd=model.state_dict(), perm_dict=perm_dict, layer_look_up=INDEX_LAYER
     )
@@ -136,10 +137,11 @@ def ste_matching() -> dict[str, torch.Tensor]:
 
 def generate_plots(
     model1: torch.nn.Module,
-    model2: torch.nn.Module,
+    model2: torch.nn.Module,    
     act_perm: Optional[dict[str, torch.Tensor]] = None,
     weight_perm: Optional[dict[str, torch.Tensor]] = None,
     ste_perm: Optional[dict[str, torch.Tensor]] = None,
+    width:int=512,
 ) -> dict[str, dict[str, np.ndarray]]:
     """
     Generate data for plots
@@ -191,15 +193,15 @@ def generate_plots(
 
     result["NaiveMatching"] = _generate_models(_model2=model2)
     if act_perm:
-        _perm_model = permute_model(model=model2, perm_dict=act_perm)
+        _perm_model = permute_model(model=model2, perm_dict=act_perm, width=width)
         _perm_model.eval()
         result["ActivationMatching"] = _generate_models(_model2=_perm_model)
     if weight_perm:
-        _perm_model = permute_model(model=model2, perm_dict=weight_perm)
+        _perm_model = permute_model(model=model2, perm_dict=weight_perm, width=width)
         _perm_model.eval()
         result["WeightMatching"] = _generate_models(_model2=_perm_model)
     if ste_perm:
-        _perm_model = permute_model(model=model2, perm_dict=ste_perm)
+        _perm_model = permute_model(model=model2, perm_dict=ste_perm, width=width)
         _perm_model.eval()
         result["STEstimator"] = _generate_models(_model2=_perm_model)
 

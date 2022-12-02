@@ -60,7 +60,7 @@ def read_file(file_path: pathlib.Path) -> Any:
     return obj
 
 
-def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
+def plt_dict(results: dict[str, dict[str, numpy.ndarray]],name:str="") -> None:
     plt.figure()
     _fmt = {
         TRAIN: {"linestyle": "solid", "marker": "*"},
@@ -77,4 +77,4 @@ def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
     plt.xlabel("Lambda")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("Results_" + time.strftime("%Y%m%d-%H%M%S"))
+    plt.savefig(f"Results_{name}")
