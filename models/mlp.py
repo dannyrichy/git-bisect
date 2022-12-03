@@ -100,12 +100,12 @@ def train(
     path.mkdir(exist_ok=True, parents=True)
     model.to(DEVICE)
     
-    print("Saving model before training")
-    torch.save(
-                model.to(torch.device("cpu")).state_dict(),
-                path.joinpath(f'{model_name}_0_1_{epochs}.pth'),
-            )
-    model.to(DEVICE)
+    # print("Saving model before training")
+    # torch.save(
+    #             model.to(torch.device("cpu")).state_dict(),
+    #             path.joinpath(f'{model_name}_0_1_{epochs}.pth'),
+    #         )
+    # model.to(DEVICE)
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -120,12 +120,12 @@ def train(
             optimizer.step()
             # print statistics
             running_loss += loss.item()
-            print(f"Saving model at {epoch+1} & batch {i+1}")
-            torch.save(
-                model.to(torch.device("cpu")).state_dict(),
-                path.joinpath(f'{model_name}_{i+1}_{epoch+1}_{epochs}.pth'),
-            )
-            model.to(DEVICE) 
+            # print(f"Saving model at {epoch+1} & batch {i+1}")
+            # torch.save(
+            #     model.to(torch.device("cpu")).state_dict(),
+            #     path.joinpath(f'{model_name}_{i+1}_{epoch+1}_{epochs}.pth'),
+            # )
+            # model.to(DEVICE) 
             if i % 30 == 29:
                 val_loss = 0.0
                 corr = 0.0
@@ -147,9 +147,9 @@ def train(
     print("Training done! 🤖")
 
     
-    # torch.save(
-    #     model.to(torch.device("cpu")).state_dict(),
-    #     path.joinpath(f'{model_name}_{epochs}.pth'),
-    # )
+    torch.save(
+        model.to(torch.device("cpu")).state_dict(),
+        path.joinpath(f'{model_name}_{epochs}.pth'),
+    )
 
     return model
