@@ -83,7 +83,7 @@ def train(
             "params": [
                 p for n, p in model.named_parameters() if (n.endswith(WEIGHT))
             ],
-            "weight_decay": 1e-3,
+            "weight_decay": 0.005,
         },
         {
             "params": [
@@ -99,6 +99,13 @@ def train(
     path = Path("./stash")
     path.mkdir(exist_ok=True, parents=True)
     model.to(DEVICE)
+    
+    print("Saving model before training")
+    torch.save(
+                model.to(torch.device("cpu")).state_dict(),
+                path.joinpath(f'{model_name}_0_1_{epochs}.pth'),
+            )
+    model.to(DEVICE)
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -113,6 +120,12 @@ def train(
             optimizer.step()
             # print statistics
             running_loss += loss.item()
+            print(f"Saving model at {epoch+1} & batch {i+1}")
+            torch.save(
+                model.to(torch.device("cpu")).state_dict(),
+                path.joinpath(f'{model_name}_{i+1}_{epoch+1}_{epochs}.pth'),
+            )
+            model.to(DEVICE) 
             if i % 30 == 29:
                 val_loss = 0.0
                 corr = 0.0
@@ -130,20 +143,13 @@ def train(
                 )
                 running_loss = 0.0
             scheduler.step()
-
-        if epoch in [1,4, 9, 19,39]:
-            print(f"Saving model at {epoch+1}")
-            torch.save(
-                model.to(torch.device("cpu")).state_dict(),
-                path.joinpath(f'{model_name}_1_{epoch}_{epochs}_{time.strftime("%Y%m%d-%H%M%S")}.pth'),
-            )
-            model.to(DEVICE)    
+               
     print("Training done! 🤖")
 
     
-    torch.save(
-        model.to(torch.device("cpu")).state_dict(),
-        path.joinpath(f'{model_name}_{epochs}_{time.strftime("%Y%m%d-%H%M%S")}.pth'),
-    )
+    # torch.save(
+    #     model.to(torch.device("cpu")).state_dict(),
+    #     path.joinpath(f'{model_name}_{epochs}.pth'),
+    # )
 
     return model

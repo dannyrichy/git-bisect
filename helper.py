@@ -60,7 +60,7 @@ def read_file(file_path: pathlib.Path) -> Any:
     return obj
 
 
-def plt_dict(results: dict[str, dict[str, numpy.ndarray]],name:str="") -> None:
+def plt_dict(results: dict[str, dict[str, numpy.ndarray]],file_path:pathlib.Path) -> None:
     plt.figure()
     _fmt = {
         TRAIN: {"linestyle": "solid", "marker": "*"},
@@ -70,11 +70,13 @@ def plt_dict(results: dict[str, dict[str, numpy.ndarray]],name:str="") -> None:
         WEIGHT_MATCH: {"color": "g"},
         STE_MATCH: {"color": "b"},
     }
+    
     for method, res in results.items():
         for set, loss_arr in res.items():
             plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set, **_fmt[set], **_fmt[method])
+            
 
     plt.xlabel("Lambda")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig(f"Results_{name}")
+    plt.savefig(file_path)
