@@ -52,7 +52,7 @@ if __name__ == "__main__":
     NUM_MODELS = 5
     for i in range(NUM_MODELS):
         m = MLP().to(DEVICE)
-        m.load_state_dict(torch.load(_STASH_PATH.joinpath(f"mlp{i+1}_512_20.pth")))
+        m.load_state_dict(torch.load(_STASH_PATH.joinpath(f"mlp{i+1}_512_40.pth")))
         models.append(m)
     
     # Getting permutation_dict for each model
@@ -88,15 +88,30 @@ if __name__ == "__main__":
                 combined_models=_models,
             ),
         }
-        pprint.pprint(_res)
+        # pprint.pprint(_res)
         return max(_res[TRAIN]) - 0.5*(_res[TRAIN][0] + _res[TRAIN][-1]), max(_res[TEST]) - 0.5*(_res[TEST][0] + _res[TEST][-1])
     
     print(_generate_models(models[0], _permutation_model[0]))
     print(_generate_models(models[0], _permutation_model[1]))
     print(_generate_models(models[0], _permutation_model[2]))
     print(_generate_models(models[0], _permutation_model[3]))
-    print(_generate_models(_permutation_model[0], _permutation_model[1]))
-    print(_generate_models(_permutation_model[1], _permutation_model[2]))
-    print(_generate_models(_permutation_model[2], _permutation_model[3]))
+    for i in range(4):
+        for j in range(i+1,4):
+            print(f"{i+1}&{j+1}",_generate_models(_permutation_model[i], _permutation_model[j]))
     print("Done !")
     
+    print("Permuting 3*,4*,5* to 2*")
+    _perm_second_order  = [
+        get_permuted_model(_permutation_model[0], models[j])
+        for j in range(1,NUM_MODELS-1)
+        ]
+    
+    print("model 2* & model 3**",_generate_models(_permutation_model[0], _perm_second_order[0]))
+    print("model 2* & model 4**",_generate_models(_permutation_model[0], _perm_second_order[1]))
+    print("model 2* & model 5**",_generate_models(_permutation_model[0], _perm_second_order[2]))
+    for i in range(3):
+        print(f"model 1 & model {i+3}**",_generate_models(models[0], _perm_second_order[i]))
+        for j in range(i+1,3):
+            print(f"model {i+3}** & model {j+3}**",_generate_models(_perm_second_order[i], _perm_second_order[j]))
+            
+    print("Permuting all to centroid")
