@@ -143,7 +143,12 @@ def train(
                 )
                 running_loss = 0.0
             scheduler.step()
-               
+        if epoch == 19:
+            torch.save(
+            model.to(torch.device("cpu")).state_dict(),
+            path.joinpath(f'{model_name}_{epoch+1}.pth'),
+        )
+            exit(0)   
     print("Training done! 🤖")
 
     
