@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 import torch
-from torchvision.models import vgg16_bn
+from torch import nn
 
 from config import (
     ACT_MATCH,
@@ -31,6 +31,8 @@ from models.vgg import (
     WEIGHT_PERM_LOOKUP,
     register_hook,
     train,
+    vgg16_bn,
+    vgg16_ln,
 )
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 from permuter.common import combine_models, get_losses
@@ -55,7 +57,7 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
-    permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
+    permuted_model = vgg16_ln(num_classes=10).to(DEVICE)
 
     perm_state_dict = copy.deepcopy(model.state_dict())
     model2_state_dict = model.state_dict()
@@ -125,7 +127,8 @@ def activation_matching() -> dict[str, torch.Tensor]:
     permuter = ActMatching(arch=LOOK_UP_LAYER)
 
     # Loading individually trained models
-    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
     vgg_model1.eval()
@@ -163,7 +166,8 @@ def weight_matching() -> dict[str, torch.Tensor]:
     :rtype: dict[str, torch.Tensor]
     """
     # Loading individually trained models
-    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
     vgg_model1.eval()
@@ -178,10 +182,12 @@ def weight_matching() -> dict[str, torch.Tensor]:
     )
     return _permutation_dict
 
+
 def ste_matching() -> dict[str, torch.Tensor]:
     print("Running STEstimator")
     train_loader, test_loader, _ = cifar10_loader(batch_size=256)
-    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
     vgg_model1.eval()
@@ -198,6 +204,7 @@ def ste_matching() -> dict[str, torch.Tensor]:
         permute_model=permute_model,
     )
     return perm
+
 
 def generate_plots(
     model1: torch.nn.Module,
@@ -256,7 +263,7 @@ def generate_plots(
         return _res
 
     result[NAIVE_MATCH] = _generate_models(_model2=model2)
-    print("Naive resuls done!")
+    print("Naive results done!")
     if act_perm:
         _perm_model = permute_model(model=model2, perm_dict=act_perm)
         _perm_model.eval()
@@ -288,23 +295,28 @@ def run():
     # else:
     #     act_perm = read_file(ACT_PERM)
     #     print("Loaded activation perm!")
-    
+
     # if not WEIGHT_PERM.is_file():
     #     weight_perm = weight_matching()
     #     write_file(WEIGHT_PERM, weight_perm)
     # else:
     #     weight_perm = read_file(WEIGHT_PERM)
     #     print("Loaded weight perm!")
-        
+
     # if not STE_PERM.is_file():
     #     ste_perm = ste_matching()
     #     write_file(STE_PERM, ste_perm)
     # else:
     #     ste_perm = read_file(STE_PERM)
     #     print("Loaded ste perm!")
+
     weight_perm = weight_matching()
-    
-    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
+    act_perm = activation_matching()
+    write_file(ACT_PERM, act_perm)
+    write_file(WEIGHT_PERM, weight_perm)
+
+    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
     vgg_model1.eval()
@@ -314,9 +326,10 @@ def run():
     vgg_model2.eval()
 
     results_dict = generate_plots(
-        model1=vgg_model1, model2=vgg_model2, 
-        # act_perm=act_perm,
-        weight_perm=weight_perm
+        model1=vgg_model1,
+        model2=vgg_model2,
+        act_perm=act_perm,
+        weight_perm=weight_perm,
     )
     plt_dict(results_dict)
     write_file(VGG_RESULTS_PATH, results_dict)

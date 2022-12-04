@@ -24,8 +24,8 @@ _STASH_PATH.mkdir(exist_ok=True, parents=True)
 
 MLP_MODEL1_PATH = _STASH_PATH.joinpath("mlp_20221105-105343.pth")
 MLP_MODEL2_PATH = _STASH_PATH.joinpath("mlp_20221105-104646.pth")
-VGG_MODEL1_PATH = _STASH_PATH.joinpath("vgg_20221122-113333.pth")
-VGG_MODEL2_PATH = _STASH_PATH.joinpath("vgg_20221122-114529.pth")
+VGG_MODEL1_PATH = _STASH_PATH.joinpath("vgg16_ln_100_20221204-141926.pth")
+VGG_MODEL2_PATH = _STASH_PATH.joinpath("vgg16_ln_100_20221204-141942.pth")
 
 MLP_PERM_PATH = _STASH_PATH.joinpath("mlp_perm")
 MLP_PERM_PATH.mkdir(exist_ok=True, parents=True)
@@ -36,4 +36,4 @@ VGG_PERM_PATH.mkdir(exist_ok=True, parents=True)
 CUDA_AVAILABLE = torch.cuda.is_available()
 DEVICE = torch.device("cuda" if CUDA_AVAILABLE else "cpu")
 
-LAMBDA_ARRAY = numpy.linspace(start=0, stop=1, num=5, dtype=numpy.float32)
+LAMBDA_ARRAY = numpy.linspace(start=0, stop=1, num=3, dtype=numpy.float32)
