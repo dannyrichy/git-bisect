@@ -91,27 +91,38 @@ if __name__ == "__main__":
         # pprint.pprint(_res)
         return max(_res[TRAIN]) - 0.5*(_res[TRAIN][0] + _res[TRAIN][-1]), max(_res[TEST]) - 0.5*(_res[TEST][0] + _res[TEST][-1])
     
-    print(_generate_models(models[0], _permutation_model[0]))
-    print(_generate_models(models[0], _permutation_model[1]))
-    print(_generate_models(models[0], _permutation_model[2]))
-    print(_generate_models(models[0], _permutation_model[3]))
-    for i in range(4):
-        for j in range(i+1,4):
-            print(f"{i+1}&{j+1}",_generate_models(_permutation_model[i], _permutation_model[j]))
-    print("Done !")
+    # print(_generate_models(models[0], _permutation_model[0]))
+    # print(_generate_models(models[0], _permutation_model[1]))
+    # print(_generate_models(models[0], _permutation_model[2]))
+    # print(_generate_models(models[0], _permutation_model[3]))
+    # for i in range(4):
+    #     for j in range(i+1,4):
+    #         print(f"{i+1}&{j+1}",_generate_models(_permutation_model[i], _permutation_model[j]))
+    # print("Done !")
     
-    print("Permuting 3*,4*,5* to 2*")
-    _perm_second_order  = [
-        get_permuted_model(_permutation_model[0], models[j])
-        for j in range(1,NUM_MODELS-1)
-        ]
+    # print("Permuting 3*,4*,5* to 2*")
+    # _perm_second_order  = [
+    #     get_permuted_model(_permutation_model[0], models[j])
+    #     for j in range(1,NUM_MODELS-1)
+    #     ]
     
-    print("model 2* & model 3**",_generate_models(_permutation_model[0], _perm_second_order[0]))
-    print("model 2* & model 4**",_generate_models(_permutation_model[0], _perm_second_order[1]))
-    print("model 2* & model 5**",_generate_models(_permutation_model[0], _perm_second_order[2]))
-    for i in range(3):
-        print(f"model 1 & model {i+3}**",_generate_models(models[0], _perm_second_order[i]))
-        for j in range(i+1,3):
-            print(f"model {i+3}** & model {j+3}**",_generate_models(_perm_second_order[i], _perm_second_order[j]))
+    # print("model 2* & model 3**",_generate_models(_permutation_model[0], _perm_second_order[0]))
+    # print("model 2* & model 4**",_generate_models(_permutation_model[0], _perm_second_order[1]))
+    # print("model 2* & model 5**",_generate_models(_permutation_model[0], _perm_second_order[2]))
+    # for i in range(3):
+    #     print(f"model 1 & model {i+3}**",_generate_models(models[0], _perm_second_order[i]))
+    #     for j in range(i+1,3):
+    #         print(f"model {i+3}** & model {j+3}**",_generate_models(_perm_second_order[i], _perm_second_order[j]))
             
     print("Permuting all to centroid")
+    __mix_models = [models[0]] + _permutation_model 
+    for _ in range(10):
+        for i in range(5):
+            _model_tmp = combine_many_models(*__mix_models[:i], *__mix_models[i+1:])
+            __mix_models[i] = get_permuted_model(_model_tmp,  __mix_models[i])
+    
+    for i in range(5):
+        for j in range(i+1,5):
+            print(f"model {i+1}** & model {j+1}**",_generate_models(__mix_models[i], __mix_models[j]))
+    
+    print("Done!")
