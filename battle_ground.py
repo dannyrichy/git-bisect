@@ -1,4 +1,4 @@
-from experiments.mlp_abalation import mlp_time_ablation,mlp_width_ablation, mlp_act_time_ablation, mlp_act_batch_ablation
+from experiments.mlp_abalation import mlp_time_ablation,mlp_width_ablation, mlp_act_time_ablation, mlp_act_batch_ablation, mlp_width_act_ablation
 from matplotlib import pyplot as plt
 from permuter.mlp import run
 # from permuter.vgg import run
@@ -17,5 +17,6 @@ if __name__ == "__main__":
     
     # mlp_time_ablation()
     # mlp_act_batch_ablation()
+    mlp_width_act_ablation()
     # mlp_act_time_ablation()
-    run()
+    # run()

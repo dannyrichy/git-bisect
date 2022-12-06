@@ -5,7 +5,12 @@ Pipfile
 Pipfile.lock
 data
 stash/vgg_*
-stash/mlp[0-9]_512_[0-9][0-9]?_40.pth
+stash/mlp[0-9]_512_[0-9]*_40.pth
+mlp_epoch_plot
+mlp_epoch_act_plot
+mlp_batch_act_plot
+mlp_width_act_plot
+mlp_width_plot
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

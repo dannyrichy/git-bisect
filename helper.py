@@ -5,6 +5,8 @@ from typing import Any
 
 import numpy
 from matplotlib import pyplot as plt
+import imageio.v3 as iio
+import imageio
 
 from config import (
     ACT_MATCH,
@@ -80,3 +82,14 @@ def plt_dict(results: dict[str, dict[str, numpy.ndarray]],file_path:pathlib.Path
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig(file_path)
+
+
+def gif_maker(folder_path:pathlib.Path):
+    images = list()
+    for file in sorted(folder_path.iterdir()):
+        if not file.is_file():
+            continue
+
+        images.append(iio.imread(file))
+    
+    imageio.mimsave(str(folder_path) + ".gif", images, fps=2)

@@ -125,7 +125,7 @@ def train(
             #     model.to(torch.device("cpu")).state_dict(),
             #     path.joinpath(f'{model_name}_{i+1}_{epoch+1}_{epochs}.pth'),
             # )
-            # model.to(DEVICE) 
+            model.to(DEVICE) 
             if i % 30 == 29:
                 val_loss = 0.0
                 corr = 0.0
@@ -142,13 +142,14 @@ def train(
                     f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 30:.3f} val_loss: {val_loss / (j+1):.3f} accuracy: {accuracy*100:.3f}%"  # type:ignore
                 )
                 running_loss = 0.0
+                # exit(0)
             scheduler.step()
-        print(f"Saving {model_name} at epoch: {epoch+1}")
-        torch.save(
-        model.to(torch.device("cpu")).state_dict(),
-        path.joinpath(f'{model_name}_{epoch+1}_{epochs}.pth'),
-        )
-        model.to(DEVICE)
+        # print(f"Saving {model_name} at epoch: {epoch+1}")
+        # torch.save(
+        # model.to(torch.device("cpu")).state_dict(),
+        # path.joinpath(f'{model_name}_{epoch+1}_{epochs}.pth'),
+        # )
+        # model.to(DEVICE)
         
     torch.save(
         model.to(torch.device("cpu")).state_dict(),
