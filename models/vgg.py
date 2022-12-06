@@ -94,10 +94,11 @@ class VGG16_BN(nn.Module):
         init_weights: bool = True,
         dropout: float = 0.5,
         multiplier: int = 64,
+        in_channels:int =3
     ) -> None:
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3, 1 * multiplier, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels, 1 * multiplier, kernel_size=3, padding=1),
             nn.BatchNorm2d(1 * multiplier),
             nn.ReLU(inplace=True),
             nn.Conv2d(1 * multiplier, 1 * multiplier, kernel_size=3, padding=1),
@@ -354,7 +355,7 @@ def train(
     path.mkdir(exist_ok=True, parents=True)
     torch.save(
         model.state_dict(),
-        path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'),
+        path.joinpath(f'{model_name}_{epochs}.pth'),
     )
 
     return model
