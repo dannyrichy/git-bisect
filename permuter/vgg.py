@@ -57,7 +57,7 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
-    permuted_model = vgg16_ln(num_classes=10).to(DEVICE)
+    permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
 
     perm_state_dict = copy.deepcopy(model.state_dict())
     model2_state_dict = model.state_dict()
@@ -127,7 +127,7 @@ def activation_matching() -> dict[str, torch.Tensor]:
     permuter = ActMatching(arch=LOOK_UP_LAYER)
 
     # Loading individually trained models
-    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
 
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
@@ -166,7 +166,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
     :rtype: dict[str, torch.Tensor]
     """
     # Loading individually trained models
-    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
 
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)
@@ -315,7 +315,7 @@ def run():
     write_file(ACT_PERM, act_perm)
     write_file(WEIGHT_PERM, weight_perm)
 
-    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
 
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)

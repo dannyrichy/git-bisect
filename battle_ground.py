@@ -11,14 +11,14 @@ from permuter.vgg import permute_model, run
 
 if __name__ == "__main__":
 
-    train_loader, val_loader, test_loader = cifar10_loader(
-        batch_size=256, validation=True, augument=True
-    )
+    # train_loader, val_loader, test_loader = cifar10_loader(
+    #     batch_size=256, validation=True, augument=True
+    # )
 
-    model = vgg16_bn(num_classes=10)
-    train(train_loader, val_loader, model, epochs=100, model_name="vgg16_bn_100")
+    # model = vgg16_bn(num_classes=10)
+    # train(train_loader, val_loader, model, epochs=100, model_name="vgg16_bn1")
 
-    # run()
+    run()
     # def weight_cost(model1: nn.Module, permuted_model2: nn.Module):
     #     cost = 0.0
     #     for param1, param2 in zip(model1.parameters(), permuted_model2.parameters()):
