@@ -83,7 +83,7 @@ def train(
             "params": [
                 p for n, p in model.named_parameters() if (n.endswith(WEIGHT))
             ],
-            "weight_decay": 0.005,
+            "weight_decay": 0.01,
         },
         {
             "params": [
@@ -92,7 +92,7 @@ def train(
             "weight_decay": 0.0,
         },
     ]
-    optimizer = optim.SGD(optimizer_parameters, lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(optimizer_parameters, lr=0.01, momentum=0.9)
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=epochs
     )
@@ -143,17 +143,16 @@ def train(
                 )
                 running_loss = 0.0
             scheduler.step()
-    
+        print(f"Saving {model_name} at epoch: {epoch+1}")
+        torch.save(
+        model.to(torch.device("cpu")).state_dict(),
+        path.joinpath(f'{model_name}_{epoch+1}_{epochs}.pth'),
+        )
+        model.to(DEVICE)
+        
     torch.save(
         model.to(torch.device("cpu")).state_dict(),
         path.joinpath(f'{model_name}_{epochs}.pth'),
     )
     print("Training done! 🤖")
-
-    
-    torch.save(
-        model.to(torch.device("cpu")).state_dict(),
-        path.joinpath(f'{model_name}_{epochs}.pth'),
-    )
-
     return model

@@ -1,4 +1,5 @@
 from copy import copy
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -247,5 +248,5 @@ def run():
     )
 
     # Creating a plot
-    plt_dict(results_dict)
+    plt_dict(results_dict, file_path=Path("mlp_loss_results"))
     write_file(MLP_RESULTS_PATH, results_dict)

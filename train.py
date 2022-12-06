@@ -1,6 +1,9 @@
 from models.mlp import train
 from models.mlp import MLP
 from models import cifar10_loader
+from models.utils import mnist_loader
+from models.vgg import train as train_vgg
+from models.vgg import vgg16_bn
 import sys
 
 if __name__ == "__main__":
