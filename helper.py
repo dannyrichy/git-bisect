@@ -5,11 +5,15 @@ from typing import Any
 
 import numpy
 from matplotlib import pyplot as plt
+import torch
+from torch.utils.data import DataLoader 
+import matplotlib.pyplot as plt
 import imageio.v3 as iio
 import imageio
 
 from config import (
     ACT_MATCH,
+    DEVICE,
     LAMBDA_ARRAY,
     NAIVE_MATCH,
     STE_MATCH,

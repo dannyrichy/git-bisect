@@ -4,6 +4,7 @@
 Pipfile
 Pipfile.lock
 data
+stash/vgg16*
 stash/vgg_*
 stash/mlp[0-9]_512_[0-9]*_40.pth
 mlp_epoch_plot

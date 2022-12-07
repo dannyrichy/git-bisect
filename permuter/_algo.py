@@ -103,7 +103,8 @@ class ActMatching(_Permuter):
 
 
 class WeightMatching(_Permuter):
-    MAX_ITER:int = 100
+    MAX_ITER: int = 100
+
     def __init__(self, arch: Sequence[str], perm_lookup: dict[str, tuple]) -> None:
         """
         _summary_s
@@ -148,28 +149,34 @@ class WeightMatching(_Permuter):
                 m1_weights[_next_conv + "." + WEIGHT],
                 self.perm[_next_perm]
                 if _next_perm in self.perm.keys
-                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(DEVICE),
+                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(
+                    DEVICE
+                ),
                 m2_weights[_next_conv + "." + WEIGHT],
             )
-            _cost_matrix += torch.nn.functional.conv2d(_tmp.unsqueeze(0).unsqueeze(0),
-                                                       weight=torch.eye(_shape).unsqueeze(0).unsqueeze(0).to(DEVICE),
-                                                       stride=_shape).squeeze()
+            _cost_matrix += torch.nn.functional.conv2d(
+                _tmp.unsqueeze(0).unsqueeze(0),
+                weight=torch.eye(_shape).unsqueeze(0).unsqueeze(0).to(DEVICE),
+                stride=_shape,
+            ).squeeze()
         else:
             _cost_matrix += torch.einsum(
                 "ji..., jk, kl... -> il",
                 m1_weights[_next_conv + "." + WEIGHT],
                 self.perm[_next_perm]
                 if _next_perm in self.perm.keys
-                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(DEVICE),
+                else torch.eye(m1_weights[_next_conv + "." + WEIGHT].shape[0]).to(
+                    DEVICE
+                ),
                 m2_weights[_next_conv + "." + WEIGHT],
             )
         _cost_matrix += torch.einsum(
-            "i,j -> ij",
+            "i...,j... -> ij",
             m1_weights[layer_name + "." + BIAS],
             m2_weights[layer_name + "." + BIAS],
         )
         _cost_matrix += torch.einsum(
-            "i,j -> ij",
+            "i...,j... -> ij",
             m1_weights[layer_name + "." + WEIGHT],
             m2_weights[layer_name + "." + WEIGHT],
         )
@@ -221,7 +228,9 @@ class WeightMatching(_Permuter):
                 m1_weights[layer_name + "." + WEIGHT],
                 self.perm[_prev_layer]
                 if _prev_layer in self.perm.keys
-                else torch.eye(m1_weights[layer_name + "." + WEIGHT].shape[1]).to(DEVICE),
+                else torch.eye(m1_weights[layer_name + "." + WEIGHT].shape[1]).to(
+                    DEVICE
+                ),
                 m2_weights[layer_name + "." + WEIGHT],
             )
             _cost_matrix += torch.einsum(
@@ -229,10 +238,11 @@ class WeightMatching(_Permuter):
                 m1_weights[_next_layer + "." + WEIGHT],
                 self.perm[_next_layer]
                 if _next_layer in self.perm.keys
-                else torch.eye(m1_weights[_next_layer + "." + WEIGHT].shape[0]).to(DEVICE),
+                else torch.eye(m1_weights[_next_layer + "." + WEIGHT].shape[0]).to(
+                    DEVICE
+                ),
                 m2_weights[_next_layer + "." + WEIGHT],
             )
-
         _cost_matrix += torch.einsum(
             "i,j -> ij",
             m1_weights[layer_name + "." + BIAS],
@@ -259,11 +269,11 @@ class WeightMatching(_Permuter):
         self._initialise_perm(m1_weights)
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
-        
+
         # and abs_diff > 1.0
-        while _ix < self.MAX_ITER :
+        while _ix < self.MAX_ITER:
             abs_diff = 0.0
-            for layer_name in random.sample(self.perm.keys,  len(self.perm.keys)):
+            for layer_name in random.sample(self.perm.keys, len(self.perm.keys)):
                 # Getting previous layer name and next layer name
                 if layer_name.startswith(FEATURES):
                     _cost_matrix = self._evaluate_conv_cost(
@@ -379,7 +389,7 @@ class STEstimator(_Permuter):
                             )
                         ).unsqueeze(0)
                     )
-                    
+
                 # Defining the optimizer
                 optim = torch.optim.SGD(params=params_hat, lr=0.01, momentum=0.9)
                 logits = func(params_merged, inp.to(DEVICE))
