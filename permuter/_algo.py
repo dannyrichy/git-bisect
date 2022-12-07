@@ -259,8 +259,9 @@ class WeightMatching(_Permuter):
         self._initialise_perm(m1_weights)
         prev_perm = copy.deepcopy(self.perm)
         abs_diff = numpy.inf
-
-        while _ix < self.MAX_ITER and abs_diff > 1.0:
+        
+        # and abs_diff > 1.0
+        while _ix < self.MAX_ITER :
             abs_diff = 0.0
             for layer_name in random.sample(self.perm.keys,  len(self.perm.keys)):
                 # Getting previous layer name and next layer name
