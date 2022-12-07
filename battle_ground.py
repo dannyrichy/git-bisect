@@ -1,7 +1,7 @@
 from experiments.mlp_abalation import mlp_time_ablation,mlp_width_ablation, mlp_act_time_ablation, mlp_act_batch_ablation, mlp_width_act_ablation
 from matplotlib import pyplot as plt
-from permuter.mlp import run
-# from permuter.vgg import run
+# from permuter.mlp import run
+from permuter.vgg import run
 # from models.vgg import train
 # from torchvision.models import vgg16_bn
 # from models.utils import cifar10_loader
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     
     # mlp_time_ablation()
     # mlp_act_batch_ablation()
-    mlp_width_act_ablation()
+    # mlp_width_act_ablation()
     # mlp_act_time_ablation()
 
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # model = vgg16_bn(num_classes=10)
     # train(train_loader, val_loader, model, epochs=100, model_name="vgg16_bn_100")
 
-    # run()
+    run()
     # def weight_cost(model1: nn.Module, permuted_model2: nn.Module):
     #     cost = 0.0
     #     for param1, param2 in zip(model1.parameters(), permuted_model2.parameters()):

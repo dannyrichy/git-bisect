@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # print(f"Model with {w} training!")
     # train(train_loader=train_loader, val_loader=validation_loader, model=MLP(WIDTH=w),epochs=40, model_name=f"{name}_{w}")
     
-    train_loader, validation_loader, test_loader = mnist_loader(batch_size=512,validation=True, augument=True)
-    train_vgg(train_loader=train_loader,  val_loader=validation_loader, model=vgg16_bn(in_channels=1), epochs=100, model_name="mnist_vgg16_bn2")
+    train_loader, validation_loader, test_loader = cifar10_loader(batch_size=512,validation=True, augument=True)
+    train_vgg(train_loader=train_loader,  val_loader=validation_loader, model=vgg16_bn(), epochs=100, model_name="lr5_vgg16_bn1")
         
     
