@@ -7,7 +7,6 @@ import numpy
 from matplotlib import pyplot as plt
 import torch
 from torch.utils.data import DataLoader 
-from sklearn.calibration import CalibrationDisplay
 import matplotlib.pyplot as plt
 
 from config import (
@@ -86,7 +85,7 @@ def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
 
 
 # Create pytorch code for calibration curve give dataloader and model
-def create_calibration_curve(model, dataloader, file_path,num_bins=10):
+def create_calibration_curve(model, dataloader, num_bins=10):
     # Get binned predictions
     bin_boundaries = numpy.linspace(0, 1, num_bins + 1)
     bin_lowers = bin_boundaries[:-1]
@@ -103,9 +102,13 @@ def create_calibration_curve(model, dataloader, file_path,num_bins=10):
         _bins = numpy.concatenate(_bins)
         _truth = numpy.concatenate(_truth)
         _agg_truth = [numpy.sum(_truth[_bins == i])/_truth[_bins == i].shape[0] for i in range(num_bins)]
-        plt.plot(bin_lowers, _agg_truth, color='g',marker="*")          
-        plt.plot([0, 1], [0, 1], color='black', label="Perfect")
-        plt.xlabel('Predicted probability')
-        plt.ylabel('Actual probabiliyt')
-        plt.title('Calibration Curve')
-        plt.savefig(file_path)
+        return bin_lowers, _agg_truth
+
+def normalised_cost(w1:dict[str, torch.Tensor], w2:dict[str, torch.Tensor]):
+    _c1 = 0.0
+    _c2 = 0.0
+    for key in  w1.keys():
+        _c1 += torch.dot(torch.flatten(w1[key]), torch.flatten(w2[key]))
+        _c2 += torch.dot(torch.flatten(w1[key]), torch.flatten(w1[key]))
+    
+    return _c1/_c2

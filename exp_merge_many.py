@@ -1,16 +1,14 @@
 import copy
 from functools import reduce
-import pprint
 from config import _STASH_PATH, DEVICE, LAMBDA_ARRAY, TEST, TRAIN
-from helper import create_calibration_curve
+from helper import create_calibration_curve, normalised_cost
 from models.mlp import LAYER_NAMES, MLP, WEIGHT_PERM_LOOKUP
 import torch
 from models.utils import cifar10_loader
 from permuter._algo import WeightMatching
 from permuter.common import combine_models, get_losses
 from permuter.mlp import permute_model
-import  numpy as np
-
+from matplotlib import pyplot as plt
 
 class Ensemble(torch.nn.Module):
     def __init__(self, *models) -> None:
@@ -72,9 +70,12 @@ if __name__ == "__main__":
     
     
     train_loader, test_loader, _ = cifar10_loader(batch_size=128)
-    ensemble_model = Ensemble(models)
-    create_calibration_curve(model=ensemble_model, dataloader=train_loader, file_path="ensemble")
-    
+    ensemble_model = Ensemble(*models)
+    for model in models:
+        x, y = create_calibration_curve(model=model, dataloader=train_loader)
+        plt.plot(x, y, color='r',linestyle="--",marker="*", label="Model")
+    x, y = create_calibration_curve(model=ensemble_model, dataloader=train_loader)
+    plt.plot(x, y, color='b', marker="*", label="Ensemble")
     def _generate_models(model1: torch.nn.Module, model2: torch.nn.Module) -> tuple:
         """
         Internal function to ensure temporary tensors gets erased
@@ -102,10 +103,11 @@ if __name__ == "__main__":
         # pprint.pprint(_res)
         return max(_res[TRAIN]) - 0.5*(_res[TRAIN][0] + _res[TRAIN][-1]), max(_res[TEST]) - 0.5*(_res[TEST][0] + _res[TEST][-1])
     
-    # print(_generate_models(models[0], _permutation_model[0]))
-    # print(_generate_models(models[0], _permutation_model[1]))
-    # print(_generate_models(models[0], _permutation_model[2]))
-    # print(_generate_models(models[0], _permutation_model[3]))
+    print("model1 and permuted_model2",_generate_models(models[0], _permutation_model[0]), normalised_cost(w1=models[0].state_dict(), w2= _permutation_model[0].state_dict()))
+    print("model1 and permuted_model3",_generate_models(models[0], _permutation_model[1]), normalised_cost(w1=models[0].state_dict(), w2= _permutation_model[1].state_dict()))
+    print("model1 and permuted_model4",_generate_models(models[0], _permutation_model[2]), normalised_cost(w1=models[0].state_dict(), w2= _permutation_model[2].state_dict()))
+    print("model1 and permuted_model5",_generate_models(models[0], _permutation_model[3]), normalised_cost(w1=models[0].state_dict(), w2= _permutation_model[3].state_dict()))
+    
     # for i in range(4):
     #     for j in range(i+1,4):
     #         print(f"{i+1}&{j+1}",_generate_models(_permutation_model[i], _permutation_model[j]))
@@ -132,11 +134,18 @@ if __name__ == "__main__":
             _model_tmp = combine_many_models(*__mix_models[:i], *__mix_models[i+1:])
             __mix_models[i] = get_permuted_model(_model_tmp,  __mix_models[i])
     
+    merged_model_final =combine_many_models(*__mix_models)
+    x, y = create_calibration_curve(model=merged_model_final, dataloader=train_loader)
     
-    create_calibration_curve(model=combine_many_models(*__mix_models), dataloader=train_loader, file_path="merged_moel")
+    plt.plot(x, y, color='g',marker="*", label="Merged model")          
+    plt.plot([0, 1], [0, 1], color='black', label="Perfect")
+    plt.xlabel('Predicted probability')
+    plt.ylabel('Actual probabiliyt')
+    plt.title('Calibration Curve')
+    plt.savefig("calibration_plot")
     
-    for i in range(5):
-        for j in range(i+1,5):
-            print(f"model {i+1}** & model {j+1}**",_generate_models(__mix_models[i], __mix_models[j]))
+    # for i in range(5):
+    #     for j in range(i+1,5):
+    #         print(f"model {i+1}** & model {j+1}**",_generate_models(__mix_models[i], __mix_models[j]))
     
     print("Done!")
