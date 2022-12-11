@@ -1,6 +1,8 @@
 import copy
 from functools import reduce
+import pprint
 from config import _STASH_PATH, DEVICE, LAMBDA_ARRAY, TEST, TRAIN
+from helper import create_calibration_curve
 from models.mlp import LAYER_NAMES, MLP, WEIGHT_PERM_LOOKUP
 import torch
 from models.utils import cifar10_loader
@@ -9,6 +11,15 @@ from permuter.common import combine_models, get_losses
 from permuter.mlp import permute_model
 import  numpy as np
 
+
+class Ensemble(torch.nn.Module):
+    def __init__(self, *models) -> None:
+        super().__init__()
+        self.models = models
+    
+    def forward(self, x):
+        out_logits = torch.mean(torch.stack([model(x) for model in self.models]), dim=0)
+        return out_logits
 
 
 
@@ -46,7 +57,6 @@ def get_permuted_model(model1, model2):
     return permuted_model
 
 if __name__ == "__main__":
-    
     models = list()
     NUM_MODELS = 5
     for i in range(NUM_MODELS):
@@ -62,6 +72,8 @@ if __name__ == "__main__":
     
     
     train_loader, test_loader, _ = cifar10_loader(batch_size=128)
+    ensemble_model = Ensemble(models)
+    create_calibration_curve(model=ensemble_model, dataloader=train_loader, file_path="ensemble")
     
     def _generate_models(model1: torch.nn.Module, model2: torch.nn.Module) -> tuple:
         """
@@ -119,6 +131,9 @@ if __name__ == "__main__":
         for i in range(5):
             _model_tmp = combine_many_models(*__mix_models[:i], *__mix_models[i+1:])
             __mix_models[i] = get_permuted_model(_model_tmp,  __mix_models[i])
+    
+    
+    create_calibration_curve(model=combine_many_models(*__mix_models), dataloader=train_loader, file_path="merged_moel")
     
     for i in range(5):
         for j in range(i+1,5):
