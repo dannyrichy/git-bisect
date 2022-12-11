@@ -301,7 +301,7 @@ def train(
             "params": [
                 p for n, p in model.named_parameters() if (n in LOOK_UP_WEIGHTS)
             ],
-            "weight_decay": 1e-2,
+            "weight_decay": 1e-4,
         },
         {
             "params": [
@@ -349,19 +349,19 @@ def train(
                 )
                 running_loss = 0.0
             scheduler.step()
-    
-        if epoch%20 == 19:
-            torch.save(
-                model.state_dict(),
-                path.joinpath(f'{model_name}_{epoch+1}_{epochs}.pth'),
-            )
+
+        # if epoch % 2 == 1:
+        #     torch.save(
+        #         model.state_dict(),
+        #         path.joinpath(f"{model_name}_{epoch+1}_{epochs}.pth"),
+        #     )
     print("Training done! 🤖")
 
-    # path = Path("./stash")
-    # path.mkdir(exist_ok=True, parents=True)
-    # torch.save(
-    #     model.state_dict(),
-    #     path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'),
-    # )
+    path = Path("./stash")
+    path.mkdir(exist_ok=True, parents=True)
+    torch.save(
+        model.state_dict(),
+        path.joinpath(f'{model_name}.pth'),
+    )
 
     return model
