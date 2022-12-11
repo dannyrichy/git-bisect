@@ -16,7 +16,7 @@ from config import (
 )
 from helper import plt_dict, read_file, write_file
 from models import MLP, cifar10_loader
-from models.mlp import INDEX_LAYER, LAYER_NAMES, register_hook
+from models.mlp import INDEX_LAYER, LAYER_NAMES, WEIGHT_PERM_LOOKUP, register_hook
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 from permuter.common import combine_models, get_losses, perm_linear_layer
 
@@ -107,7 +107,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
     mlp_model2.to(DEVICE)
     mlp_model2.eval()
 
-    weight_matcher = WeightMatching(arch=LAYER_NAMES)
+    weight_matcher = WeightMatching(arch=LAYER_NAMES, perm_lookup=WEIGHT_PERM_LOOKUP)
     _permutation_dict = weight_matcher.evaluate_permutation(
         m1_weights=mlp_model1.state_dict(), m2_weights=mlp_model2.state_dict()
     )
@@ -124,7 +124,7 @@ def ste_matching() -> dict[str, torch.Tensor]:
     mlp_model2.load_state_dict(torch.load(MLP_MODEL2_PATH))
     mlp_model2.to(DEVICE)
 
-    ste = STEstimator(arch=LAYER_NAMES)
+    ste = STEstimator(arch=LAYER_NAMES, perm_lookup=WEIGHT_PERM_LOOKUP)
     perm, losses = ste.evaluate_permutation(
         model1=mlp_model1,
         model2=mlp_model2,
@@ -226,7 +226,7 @@ def run():
         write_file(STE_PERM, ste_perm)
     else:
         ste_perm = read_file(STE_PERM)
-
+    
     mlp_model1, mlp_model2 = MLP(), MLP()
     mlp_model1.load_state_dict(torch.load(MLP_MODEL1_PATH))
     mlp_model1.to(DEVICE)

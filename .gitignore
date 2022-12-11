@@ -4,6 +4,7 @@
 Pipfile
 Pipfile.lock
 data
+stash/vgg16*
 stash/vgg_*
 
 # Byte-compiled / optimized / DLL files
