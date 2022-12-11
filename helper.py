@@ -64,7 +64,7 @@ def read_file(file_path: pathlib.Path) -> Any:
     return obj
 
 
-def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
+def plt_dict(results: dict[str, dict[str, numpy.ndarray]], file_path) -> None:
     plt.figure()
     _fmt = {
         TRAIN: {"linestyle": "solid", "marker": "*"},
@@ -76,12 +76,18 @@ def plt_dict(results: dict[str, dict[str, numpy.ndarray]]) -> None:
     }
     for method, res in results.items():
         for set, loss_arr in res.items():
-            plt.plot(LAMBDA_ARRAY, loss_arr, label=method + "_" + set, **_fmt[set], **_fmt[method])
+            plt.plot(
+                LAMBDA_ARRAY,
+                loss_arr,
+                label=method + "_" + set,
+                **_fmt[set],
+                **_fmt[method],
+            )
 
     plt.xlabel("Lambda")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("Results_" + time.strftime("%Y%m%d-%H%M%S"))
+    plt.savefig(file_path)
 
 
 # Create pytorch code for calibration curve give dataloader and model

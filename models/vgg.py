@@ -318,7 +318,8 @@ def train(
         optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=epochs
     )
     model.to(DEVICE)
-
+    path = Path("./stash")
+    path.mkdir(exist_ok=True, parents=True)
     for epoch in range(epochs):
         running_loss = 0.0
         for i, data in enumerate(train_loader):
@@ -349,13 +350,19 @@ def train(
                 )
                 running_loss = 0.0
             scheduler.step()
+
+        # if epoch % 2 == 1:
+        #     torch.save(
+        #         model.state_dict(),
+        #         path.joinpath(f"{model_name}_{epoch+1}_{epochs}.pth"),
+        #     )
     print("Training done! 🤖")
 
     path = Path("./stash")
     path.mkdir(exist_ok=True, parents=True)
     torch.save(
         model.state_dict(),
-        path.joinpath(f'{model_name}_{epochs}.pth'),
+        path.joinpath(f'{model_name}.pth'),
     )
 
     return model

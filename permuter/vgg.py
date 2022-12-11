@@ -19,6 +19,7 @@ from config import (
     TRAIN,
     _STASH_PATH,
     VGG_PERM_PATH,
+    VGG_RESULTS_PATH,
     WEIGHT,
     WEIGHT_MATCH,
 )
@@ -58,6 +59,7 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
+    permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
     permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
 
     perm_state_dict = copy.deepcopy(model.state_dict())
@@ -332,5 +334,5 @@ def run():
         act_perm=act_perm,
         weight_perm=weight_perm,
     )
-    plt_dict(results_dict, file_path=Path("vgg_cifar10_lr5"))
-    write_file(Path("vgg_cifar10_lr5.pkl"), results_dict)
+    plt_dict(results_dict, file_path="vgg16_bn_cifar10")
+    write_file(VGG_RESULTS_PATH, results_dict)

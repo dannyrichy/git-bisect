@@ -30,15 +30,9 @@ def cifar10_loader(
     if augument:
         train_transform = transforms.Compose(
             [
-                transforms.AutoAugment(
-                        transforms.AutoAugmentPolicy.CIFAR10
-                    ),
+                transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    (0.5, 0.5, 0.5),
-                    (0.5, 0.5, 0.5),
-                    
-                ),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]
         )
 

@@ -24,8 +24,8 @@ _STASH_PATH.mkdir(exist_ok=True, parents=True)
 
 MLP_MODEL1_PATH = _STASH_PATH.joinpath("mlp1_512_40.pth")
 MLP_MODEL2_PATH = _STASH_PATH.joinpath("mlp2_512_40.pth")
-VGG_MODEL1_PATH = _STASH_PATH.joinpath("vgg16_ln_100_20221204-141926.pth")
-VGG_MODEL2_PATH = _STASH_PATH.joinpath("vgg16_ln_100_20221204-141942.pth")
+VGG_MODEL1_PATH = _STASH_PATH.joinpath("vgg16_bn_100_100.pth")
+VGG_MODEL2_PATH = _STASH_PATH.joinpath("vgg16_bn1_100_100.pth")
 
 MLP_PERM_PATH = _STASH_PATH.joinpath("mlp_perm")
 MLP_PERM_PATH.mkdir(exist_ok=True, parents=True)
