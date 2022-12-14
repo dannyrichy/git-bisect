@@ -1,4 +1,5 @@
 import copy
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -16,8 +17,7 @@ from config import (
     STE_MATCH,
     TEST,
     TRAIN,
-    VGG_MODEL1_PATH,
-    VGG_MODEL2_PATH,
+    _STASH_PATH,
     VGG_PERM_PATH,
     VGG_RESULTS_PATH,
     WEIGHT,
@@ -31,15 +31,17 @@ from models.vgg import (
     WEIGHT_PERM_LOOKUP,
     register_hook,
     train,
-    vgg16_bn,
-    vgg16_ln,
+    vgg16_bn
 )
 from permuter._algo import ActMatching, STEstimator, WeightMatching
 from permuter.common import combine_models, get_losses
 
-WEIGHT_PERM = VGG_PERM_PATH.joinpath("weight_perm.pkl")
-ACT_PERM = VGG_PERM_PATH.joinpath("act_perm.pkl")
-STE_PERM = VGG_PERM_PATH.joinpath("ste_perm.pkl")
+
+VGG_MODEL1_PATH = _STASH_PATH.joinpath('lr5_vgg16_bn1_100.pth')
+VGG_MODEL2_PATH = _STASH_PATH.joinpath('lr5_vgg16_bn2_100.pth')
+WEIGHT_PERM = VGG_PERM_PATH.joinpath("lr5_weight_perm.pkl")
+ACT_PERM = VGG_PERM_PATH.joinpath("lr5_act_perm.pkl")
+STE_PERM = VGG_PERM_PATH.joinpath("lr5_ste_perm.pkl")
 
 
 def permute_model(
@@ -57,6 +59,7 @@ def permute_model(
     :rtype: torch.nn.Module
     """
     # Creating model instance to hold the permuted model
+    permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
     permuted_model = vgg16_bn(num_classes=10).to(DEVICE)
 
     perm_state_dict = copy.deepcopy(model.state_dict())
@@ -186,7 +189,7 @@ def weight_matching() -> dict[str, torch.Tensor]:
 def ste_matching() -> dict[str, torch.Tensor]:
     print("Running STEstimator")
     train_loader, test_loader, _ = cifar10_loader(batch_size=256)
-    vgg_model1, vgg_model2 = vgg16_ln(num_classes=10), vgg16_ln(num_classes=10)
+    vgg_model1, vgg_model2 = vgg16_bn(num_classes=10), vgg16_bn(num_classes=10)
 
     vgg_model1.load_state_dict(torch.load(VGG_MODEL1_PATH))
     vgg_model1.to(DEVICE)

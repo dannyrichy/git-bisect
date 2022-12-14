@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch import nn
 from torch.utils.data import DataLoader
 
-from config import DEVICE
+from config import BIAS, DEVICE, WEIGHT
 from models.utils import hook_func
 
 LAYER_NAMES = ["layer_1", "layer_2", "layer_3", "layer_4"]
@@ -19,21 +19,20 @@ WEIGHT_PERM_LOOKUP = {
     "layer_3": ("layer_2", "layer_4"),
 }
 
-
 class MLP(nn.Module):
     """
     Multilayer Perceptron.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, WIDTH:int=512) -> None:
         super().__init__()
-        self.layer_1 = nn.Linear(32 * 32 * 3, 512)
+        self.layer_1 = nn.Linear(32 * 32 * 3, WIDTH)
         self.relu_layer_1 = nn.ReLU()
-        self.layer_2 = nn.Linear(512, 512)
+        self.layer_2 = nn.Linear(WIDTH, WIDTH)
         self.relu_layer_2 = nn.ReLU()
-        self.layer_3 = nn.Linear(512, 512)
+        self.layer_3 = nn.Linear(WIDTH, WIDTH)
         self.relu_layer_3 = nn.ReLU()
-        self.layer_4 = nn.Linear(512, 10)
+        self.layer_4 = nn.Linear(WIDTH, 10)
 
     def forward(self, x: torch.Tensor):
         """
@@ -79,8 +78,34 @@ def train(
     model_name: str = "mlp",
 ) -> MLP:
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer_parameters = [
+        {
+            "params": [
+                p for n, p in model.named_parameters() if (n.endswith(WEIGHT))
+            ],
+            "weight_decay": 0.01,
+        },
+        {
+            "params": [
+                p for n, p in model.named_parameters() if (n.endswith(BIAS))
+            ],
+            "weight_decay": 0.0,
+        },
+    ]
+    optimizer = optim.SGD(optimizer_parameters, lr=0.01, momentum=0.9)
+    scheduler = optim.lr_scheduler.OneCycleLR(
+        optimizer, max_lr=0.1, steps_per_epoch=len(train_loader), epochs=epochs
+    )
+    path = Path("./stash")
+    path.mkdir(exist_ok=True, parents=True)
     model.to(DEVICE)
+    
+    # print("Saving model before training")
+    # torch.save(
+    #             model.to(torch.device("cpu")).state_dict(),
+    #             path.joinpath(f'{model_name}_0_1_{epochs}.pth'),
+    #         )
+    # model.to(DEVICE)
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -95,7 +120,13 @@ def train(
             optimizer.step()
             # print statistics
             running_loss += loss.item()
-            if i % 2000 == 1999:
+            # print(f"Saving model at {epoch+1} & batch {i+1}")
+            # torch.save(
+            #     model.to(torch.device("cpu")).state_dict(),
+            #     path.joinpath(f'{model_name}_{i+1}_{epoch+1}_{epochs}.pth'),
+            # )
+            model.to(DEVICE) 
+            if i % 30 == 29:
                 val_loss = 0.0
                 corr = 0.0
                 with torch.no_grad():
@@ -108,16 +139,21 @@ def train(
                         corr += torch.sum(preds == labels).item()
                     accuracy = corr / len(val_loader.dataset)  # type:ignore
                 print(
-                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 2000:.3f} val_loss: {val_loss / (j+1):.3f} accuracy: {accuracy*100:.3f}%"  # type:ignore
+                    f"[{epoch + 1}, {i + 1:5d}] train_loss: {running_loss / 30:.3f} val_loss: {val_loss / (j+1):.3f} accuracy: {accuracy*100:.3f}%"  # type:ignore
                 )
                 running_loss = 0.0
-    print("Training done! 🤖")
-
-    path = Path("./stash")
-    path.mkdir(exist_ok=True, parents=True)
+                # exit(0)
+            scheduler.step()
+        # print(f"Saving {model_name} at epoch: {epoch+1}")
+        # torch.save(
+        # model.to(torch.device("cpu")).state_dict(),
+        # path.joinpath(f'{model_name}_{epoch+1}_{epochs}.pth'),
+        # )
+        # model.to(DEVICE)
+        
     torch.save(
-        model.state_dict(),
-        path.joinpath(f'{model_name}_{time.strftime("%Y%m%d-%H%M%S")}.pth'),
+        model.to(torch.device("cpu")).state_dict(),
+        path.joinpath(f'{model_name}_{epochs}.pth'),
     )
-
+    print("Training done! 🤖")
     return model

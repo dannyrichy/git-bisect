@@ -6,6 +6,7 @@ Pipfile.lock
 data
 stash/vgg16*
 stash/vgg_*
+stash/mlp[0-9]_512_[0-9]*_40.pth
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

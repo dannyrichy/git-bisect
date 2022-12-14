@@ -86,18 +86,20 @@ def mnist_loader(
     ],
     """
     transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        [transforms.Resize(size=(32,32)), transforms.ToTensor(), transforms.Normalize((0.1307),
+                    (0.3081) )]
     )
 
     if augument:
         train_transform = transforms.Compose(
-            [
+            [transforms.Resize(size=(32,32)),   
+             transforms.RandAugment(),
                 transforms.ToTensor(),
                 transforms.Normalize(
-                    (0.5, 0.5, 0.5),
-                    (0.5, 0.5, 0.5)  
+                    (0.1307),
+                    (0.3081)  
                 ),
-                    transforms.RandAugment(),
+                    
             ]
         )
 
