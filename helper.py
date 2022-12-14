@@ -114,7 +114,7 @@ def normalised_cost(w1:dict[str, torch.Tensor], w2:dict[str, torch.Tensor]):
     _c1 = 0.0
     _c2 = 0.0
     for key in  w1.keys():
-        _c1 += torch.dot(torch.flatten(w1[key]), torch.flatten(w2[key]))
-        _c2 += torch.dot(torch.flatten(w1[key]), torch.flatten(w1[key]))
+        _c1 += torch.dot(torch.flatten(w1[key]), torch.flatten(w2[key])).detach().cpu().numpy()
+        _c2 += torch.dot(torch.flatten(w1[key]), torch.flatten(w1[key])).detach().cpu().numpy()
     
     return _c1/_c2
