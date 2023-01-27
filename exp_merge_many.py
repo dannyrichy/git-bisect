@@ -71,11 +71,11 @@ if __name__ == "__main__":
     
     train_loader, test_loader, _ = cifar10_loader(batch_size=128)
     ensemble_model = Ensemble(*models)
-    for model in models:
+    for ix, model in enumerate(models):
         x, y = create_calibration_curve(model=model, dataloader=train_loader)
-        plt.plot(x, y, color='r',linestyle="--",marker="*", label="Model")
+        plt.plot(x, y, color='r',linestyle="--",marker="*", label="Individual models" if ix==0 else "")
     x, y = create_calibration_curve(model=ensemble_model, dataloader=train_loader)
-    plt.plot(x, y, color='b', marker="*", label="Ensemble")
+    plt.plot(x, y, color='b', marker="*", label="Ensemble model")
     def _generate_models(model1: torch.nn.Module, model2: torch.nn.Module) -> tuple:
         """
         Internal function to ensure temporary tensors gets erased
@@ -138,14 +138,36 @@ if __name__ == "__main__":
     x, y = create_calibration_curve(model=merged_model_final, dataloader=train_loader)
     
     plt.plot(x, y, color='g',marker="*", label="Merged model")          
-    plt.plot([0, 1], [0, 1], color='black', label="Perfect")
+    plt.plot([0, 1], [0, 1], color='black', label="Perfect calibration")
     plt.xlabel('Predicted probability')
     plt.ylabel('Actual probabiliyt')
     plt.title('Calibration Curve')
+    plt.legend()
     plt.savefig("calibration_plot")
     
-    # for i in range(5):
-    #     for j in range(i+1,5):
-    #         print(f"model {i+1}** & model {j+1}**",_generate_models(__mix_models[i], __mix_models[j]))
+    merged_model_corr = 0.0
+    individual_model_corr = [0.0 for _ in range(models.__len__())]
+    ensemble_model_corr = 0.0
+    with torch.no_grad():
+        for i, data in enumerate(test_loader):
+            inputs, labels = data
+            
+            # Merged model
+            _, preds = torch.max(merged_model_final(inputs.to(DEVICE)), dim=1)
+            merged_model_corr += torch.sum(preds == labels.to(DEVICE)).item()
+            
+            # Individual models
+            for ix, m in enumerate(models):
+                _, preds = torch.max(m(inputs.to(DEVICE)), dim=1)
+                individual_model_corr[ix] += torch.sum(preds == labels.to(DEVICE)).item() 
+            
+            # Merged model
+            _, preds = torch.max(ensemble_model(inputs.to(DEVICE)), dim=1)
+            ensemble_model_corr += torch.sum(preds == labels.to(DEVICE)).item()              
+        
+        print("Merged model accuracy: ", merged_model_corr / len(test_loader.dataset))  #type: ignore
+        print("Individual model accuracies: ", [tmp / len(test_loader.dataset) for tmp in individual_model_corr])  #type: ignore
+        print("Ensemble model accuracy: ", ensemble_model_corr / len(test_loader.dataset))  #type: ignore
+            
     
     print("Done!")
