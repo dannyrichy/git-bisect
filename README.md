@@ -2,7 +2,7 @@
 ## About
 Project for course DD2412.
  - Implementation of https://arxiv.org/pdf/2209.04836.pdf in pytorch
- - Dataset used: [CIFAR10]
+ - Dataset used: CIFAR10, MNIST
 
 ## Code structure
 - [permuter]
@@ -32,5 +32,5 @@ For a detailed report check [Git Bi-sect.pdf]
 [helper.py]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/helper.py
 [MLP]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/models/mlp.py
 [VGG]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/models/vgg.py
-[CIFAR10]: https://www.cs.toronto.edu/~kriz/cifar.html
 [Git Bi-sect.pdf]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/Git%20Bi-sect.pdf
+
