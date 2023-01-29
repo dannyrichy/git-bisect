@@ -16,10 +16,7 @@ Project for course DD2412.
 - [config.py] contains configurations
 - [helper.py] contains helper functions
 
-## Add ons
-Planned add-ons:
-- For activation matching, we perform on the activations before passing it to Activation layer
-- Stay tuned 🤖
+For a detailed report check [Git Bi-sect.pdf]
 
 
 [models]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/models
@@ -36,3 +33,4 @@ Planned add-ons:
 [MLP]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/models/mlp.py
 [VGG]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/models/vgg.py
 [CIFAR10]: https://www.cs.toronto.edu/~kriz/cifar.html
+[Git Bi-sect.pdf]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/Git%20Bi-sect.pdf
