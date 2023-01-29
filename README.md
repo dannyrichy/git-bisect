@@ -1,5 +1,6 @@
 # git-bisect
 ## About
+Report: [Git Bi-sect.pdf]
 Project for course DD2412.
  - Implementation of https://arxiv.org/pdf/2209.04836.pdf in pytorch
  - Dataset used: CIFAR10, MNIST
@@ -15,8 +16,6 @@ Project for course DD2412.
 - [battle_ground.py] is as the name suggests where experiments are carried out 💚
 - [config.py] contains configurations
 - [helper.py] contains helper functions
-
-For a detailed report check [Git Bi-sect.pdf]
 
 
 [models]: https://github.com/the-nihilist-ninja/git-bisect/blob/master/models
